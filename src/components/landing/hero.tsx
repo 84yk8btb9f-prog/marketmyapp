@@ -31,21 +31,13 @@ function FadeUp({ children, delay = 0, className }: { children: React.ReactNode;
 export function Hero() {
   return (
     <section className="relative min-h-screen flex flex-col items-center justify-center px-6 pt-24 pb-20 overflow-hidden">
-      {/* Purple glow */}
+      {/* Subtle glow */}
       <div
         aria-hidden
-        className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[60%] w-[720px] h-[480px] rounded-full opacity-20 blur-3xl"
+        className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[60%] w-[600px] h-[400px] rounded-full opacity-10 blur-3xl"
         style={{
           background:
-            "radial-gradient(ellipse at center, oklch(0.65 0.25 285) 0%, transparent 70%)",
-        }}
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[300px] rounded-full opacity-10 blur-2xl"
-        style={{
-          background:
-            "radial-gradient(ellipse at center, oklch(0.75 0.2 300) 0%, transparent 70%)",
+            "radial-gradient(ellipse at center, oklch(0.58 0.22 264) 0%, transparent 70%)",
         }}
       />
 
@@ -69,7 +61,7 @@ export function Hero() {
             <span
               style={{
                 background:
-                  "linear-gradient(135deg, oklch(0.75 0.22 285) 0%, oklch(0.65 0.25 285) 50%, oklch(0.7 0.2 300) 100%)",
+                  "linear-gradient(135deg, oklch(0.72 0.18 264) 0%, oklch(0.58 0.22 264) 100%)",
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
                 backgroundClip: "text",

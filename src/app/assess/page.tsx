@@ -63,23 +63,21 @@ const PRIORITY_ICONS = [
 
 function StepIndicator({ current, total }: { current: number; total: number }) {
   return (
-    <div className="flex items-center gap-2 mb-8">
-      {Array.from({ length: total }).map((_, i) => (
-        <div
-          key={i}
-          className={cn(
-            "h-1 rounded-full transition-all duration-500",
-            i < current
-              ? "bg-primary w-8"
-              : i === current
-              ? "bg-primary w-12"
-              : "bg-border w-8"
-          )}
-        />
-      ))}
-      <span className="ml-2 text-xs text-muted-foreground font-medium">
-        {current + 1} / {total}
-      </span>
+    <div className="mb-8">
+      <div className="flex items-center gap-1.5 mb-2">
+        {Array.from({ length: total }).map((_, i) => (
+          <div
+            key={i}
+            className={cn(
+              "h-1 flex-1 rounded-full transition-all duration-500",
+              i <= current ? "bg-primary" : "bg-border"
+            )}
+          />
+        ))}
+      </div>
+      <p className="text-center text-xs text-muted-foreground font-medium">
+        Step {current + 1} of {total}
+      </p>
     </div>
   );
 }
