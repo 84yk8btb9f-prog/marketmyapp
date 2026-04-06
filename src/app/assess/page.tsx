@@ -336,13 +336,28 @@ export default function AssessPage() {
               : "Solid progress. A few targeted actions will move the needle fast."}
           </motion.p>
 
+          {/* Congrats callout */}
+          <motion.div
+            variants={FADE_UP}
+            initial="hidden"
+            animate="visible"
+            transition={{ delay: 0.9 }}
+            className="mb-8 rounded-xl border border-primary/20 bg-primary/5 px-5 py-4 text-center"
+          >
+            <p className="text-sm text-foreground/80 leading-relaxed">
+              By the way — just by being here, you&apos;re already ahead of{" "}
+              <span className="font-semibold text-foreground">99% of founders</span>.
+              Most never think seriously about marketing. You did. That&apos;s the real win.
+            </p>
+          </motion.div>
+
           {/* Top 3 priorities */}
           {result.priorities.length > 0 && (
             <motion.div
               variants={FADE_UP}
               initial="hidden"
               animate="visible"
-              transition={{ delay: 0.8 }}
+              transition={{ delay: 1.1 }}
               className="mb-8 space-y-3"
             >
               <h2 className="text-sm font-semibold text-foreground mb-4 text-center uppercase tracking-widest text-muted-foreground">
@@ -353,7 +368,7 @@ export default function AssessPage() {
                   key={i}
                   initial={{ opacity: 0, x: -16 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.9 + i * 0.12, duration: 0.4, ease: "easeOut" }}
+                  transition={{ delay: 1.2 + i * 0.12, duration: 0.4, ease: "easeOut" }}
                   className="flex items-start gap-4 rounded-xl border border-border bg-card px-4 py-3.5 ring-1 ring-foreground/5"
                 >
                   <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
