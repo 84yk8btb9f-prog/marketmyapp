@@ -170,13 +170,17 @@ export default function AssessPage() {
       const res = await fetch("/api/health-score", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          app_name: data.appName,
+          stage: data.stage,
+          biggest_struggle: data.struggle,
+        }),
       });
       if (!res.ok) throw new Error("Failed to analyze");
       const json = await res.json();
 
       // Normalise the response — the API may return priorities as strings or objects
-      const rawPriorities: unknown[] = json.priorities ?? [];
+      const rawPriorities: unknown[] = json.top_priorities ?? json.priorities ?? [];
       const priorities: Priority[] = rawPriorities.map(
         (p: unknown, i: number) => {
           if (typeof p === "string") {
