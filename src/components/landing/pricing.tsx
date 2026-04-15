@@ -30,7 +30,7 @@ const plans = [
     period: "7 days",
     description: "Experience the full co-pilot before paying a cent.",
     cta: "Start Free Trial",
-    ctaHref: "/assess",
+    ctaHref: "/signup",
     highlight: false,
     badge: "7-Day Trial",
     features: [
@@ -47,7 +47,7 @@ const plans = [
     period: "per month",
     description: "Your AI marketing co-pilot, every single week.",
     cta: "Get Started",
-    ctaHref: "/assess",
+    ctaHref: "/signup",
     highlight: true,
     badge: "Most popular",
     features: [
@@ -193,7 +193,7 @@ export function Pricing() {
           transition={{ duration: 0.6, delay: 0.3 }}
           className="text-center text-sm text-muted-foreground mt-8"
         >
-          No credit card required to start. Cancel anytime.
+          Card required for trial. No charge for 7 days. Cancel anytime.
         </motion.p>
       </div>
     </section>

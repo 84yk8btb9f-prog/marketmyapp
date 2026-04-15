@@ -38,7 +38,7 @@ export default function SignupPage() {
       return;
     }
 
-    router.push("/dashboard");
+    router.push("/trial");
   }
 
   async function handleGoogleSignup() {
