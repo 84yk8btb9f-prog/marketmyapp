@@ -61,7 +61,7 @@ export function HowItWorks() {
             className="hidden md:block absolute top-12 left-[calc(16.67%+2rem)] right-[calc(16.67%+2rem)] h-px"
             style={{
               background:
-                "linear-gradient(90deg, transparent, oklch(0.65 0.25 285 / 0.3), oklch(0.65 0.25 285 / 0.3), transparent)",
+                "linear-gradient(90deg, transparent, oklch(0.76 0.17 55 / 0.25), oklch(0.76 0.17 55 / 0.25), transparent)",
             }}
           />
 
@@ -74,9 +74,14 @@ export function HowItWorks() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-80px" }}
                 transition={{ ...EASE, delay: index * 0.15 }}
-                className="relative flex flex-col items-center text-center p-8 rounded-2xl border border-border bg-card hover:border-primary/30 transition-colors group"
+                className="relative flex flex-col items-center text-center p-8 rounded-2xl border border-border bg-card hover:border-primary/30 transition-colors group overflow-hidden"
               >
-                {/* Step number */}
+                {/* Large background step number */}
+                <span className="pointer-events-none select-none absolute -bottom-5 -right-2 text-[9rem] leading-none font-bold font-mono text-foreground/[0.035] group-hover:text-primary/[0.06] transition-colors">
+                  {step.number}
+                </span>
+
+                {/* Step number badge */}
                 <span className="absolute top-4 right-5 text-xs font-mono font-medium text-muted-foreground/40 group-hover:text-primary/40 transition-colors">
                   {step.number}
                 </span>

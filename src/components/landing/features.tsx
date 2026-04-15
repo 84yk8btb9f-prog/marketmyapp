@@ -96,7 +96,7 @@ export function Features() {
             <div
               aria-hidden
               className="pointer-events-none absolute -top-12 -right-12 w-40 h-40 rounded-full blur-2xl opacity-20"
-              style={{ background: "oklch(0.65 0.25 285)" }}
+              style={{ background: "oklch(0.76 0.17 55)" }}
             />
 
             <div className="flex items-center gap-2 mb-6 relative z-10">
