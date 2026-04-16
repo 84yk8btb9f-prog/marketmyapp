@@ -35,322 +35,7 @@ import {
 } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import type { PlanContent, ActionItem } from "@/types";
-
-// ─── mock data ─────────────────────────────────────────────────────────────────
-
-const MOCK_PLAN_CONTENT: PlanContent = {
-  health_score: {
-    score: 64,
-    breakdown: {
-      positioning: 72,
-      audience: 80,
-      channels: 55,
-      content: 48,
-      metrics: 60,
-    },
-    top_priorities: [
-      {
-        title: "Nail your positioning",
-        description:
-          "Your value prop isn't punchy enough for cold traffic.",
-        impact: "High",
-      },
-      {
-        title: "Pick one channel and go deep",
-        description: "Spreading across 5 channels is diluting your effort.",
-        impact: "High",
-      },
-      {
-        title: "Start tracking weekly signups",
-        description: "You can't improve what you don't measure.",
-        impact: "Medium",
-      },
-    ],
-    encouragement:
-      "You're in the top 40% of apps at your stage. A few focused moves will unlock real momentum.",
-  },
-  this_weeks_top_3: [
-    {
-      title: "Post your founder story on Indie Hackers",
-      description:
-        "Write a transparent behind-the-scenes post about why you built this app and where you are today.",
-      time_estimate: "2 hours",
-      priority: "MUST DO",
-      status: "pending",
-      why_now:
-        "Indie Hackers has high organic reach for authentic stories at your stage.",
-      expected_outcome:
-        "50–150 upvotes and 5–20 warm leads visiting your site.",
-    },
-    {
-      title: "Rewrite your homepage headline",
-      description:
-        "Test a benefit-first headline instead of the current feature description.",
-      time_estimate: "45 minutes",
-      priority: "MUST DO",
-      status: "pending",
-      why_now: "Your bounce rate is high, which suggests the first impression isn't converting.",
-      expected_outcome: "10–25% improvement in conversion from landing page.",
-    },
-    {
-      title: "DM 10 target users on Twitter/X",
-      description:
-        "Find active indie hackers discussing your problem space and send a brief, genuine message.",
-      time_estimate: "1 hour",
-      priority: "SHOULD DO",
-      status: "pending",
-      why_now: "Direct outreach gives the fastest feedback loop.",
-      expected_outcome: "2–4 conversations that could convert to beta users.",
-    },
-  ],
-  what_to_skip: [
-    {
-      action: "Running paid ads right now",
-      reason:
-        "With under 100 users you don't have enough data to build a converting audience. You'll burn budget.",
-    },
-    {
-      action: "Building a TikTok presence",
-      reason:
-        "Your audience is developers. TikTok is high effort with low ROI for this demographic.",
-    },
-    {
-      action: "Hiring a marketing agency",
-      reason:
-        "Agencies need a proven playbook to scale. You're still finding product-market fit.",
-    },
-  ],
-  positioning: {
-    tagline: "Ship marketing as fast as you ship code.",
-    value_prop:
-      "MarketMyApp gives indie founders a clear, prioritized marketing plan so they stop second-guessing and start executing.",
-    elevator_pitch:
-      "You know how founders spend way too much time figuring out what to do for marketing instead of just doing it? MarketMyApp gives you an AI-generated, personalised action plan in minutes — so this week you know exactly what to work on.",
-  },
-  channel_strategy: [
-    {
-      channel: "Indie Hackers",
-      roi_rank: 1,
-      why: "Your audience is active there and trusts authentic founder stories.",
-      first_action: "Post a milestone update today.",
-    },
-    {
-      channel: "Twitter/X",
-      roi_rank: 2,
-      why: "Building in public compounds over time and attracts early adopters.",
-      first_action: "Tweet your biggest learning from this week.",
-    },
-    {
-      channel: "Hacker News",
-      roi_rank: 3,
-      why: "High-quality traffic if you hit front page with a Show HN.",
-      first_action: "Prepare a Show HN post for your next release.",
-    },
-    {
-      channel: "Product Hunt",
-      roi_rank: 4,
-      why: "Great for a defined launch moment once you have some traction.",
-      first_action: "Start collecting hunter contacts for launch day.",
-    },
-  ],
-  sprint_30_day: [
-    {
-      week: 1,
-      tasks: [
-        {
-          title: "Publish founder story on Indie Hackers",
-          description: "Transparent post about why you built this.",
-          time_estimate: "2h",
-          priority: "MUST DO",
-          status: "pending",
-          why_now: "Early momentum matters",
-          expected_outcome: "First organic traffic spike",
-        },
-        {
-          title: "Rewrite homepage headline",
-          description: "Benefit-first copy above the fold.",
-          time_estimate: "1h",
-          priority: "MUST DO",
-          status: "pending",
-          why_now: "Highest-leverage conversion fix",
-          expected_outcome: "Lower bounce rate",
-        },
-      ],
-    },
-    {
-      week: 2,
-      tasks: [
-        {
-          title: "Set up Plausible / PostHog analytics",
-          description: "Start measuring what matters.",
-          time_estimate: "1h",
-          priority: "MUST DO",
-          status: "pending",
-          why_now: "You can't improve what you don't measure",
-          expected_outcome: "Data to inform next sprint",
-        },
-        {
-          title: "DM 20 target users on Twitter/X",
-          description: "Find your people, start conversations.",
-          time_estimate: "2h",
-          priority: "SHOULD DO",
-          status: "pending",
-          why_now: "Fastest feedback loop",
-          expected_outcome: "4–8 discovery calls",
-        },
-      ],
-    },
-    {
-      week: 3,
-      tasks: [
-        {
-          title: "Write a problem-focused blog post",
-          description: "SEO long-tail content targeting your niche.",
-          time_estimate: "3h",
-          priority: "SHOULD DO",
-          status: "pending",
-          why_now: "Content compounds over months",
-          expected_outcome: "Organic search traffic in 60–90 days",
-        },
-        {
-          title: "Build in public on Twitter/X",
-          description: "Share a weekly metrics tweet.",
-          time_estimate: "30m",
-          priority: "SHOULD DO",
-          status: "pending",
-          why_now: "Consistency builds audience",
-          expected_outcome: "Follower growth + engagement",
-        },
-      ],
-    },
-    {
-      week: 4,
-      tasks: [
-        {
-          title: "Review analytics and double down on what's working",
-          description: "Kill what isn't, amplify what is.",
-          time_estimate: "1h",
-          priority: "MUST DO",
-          status: "pending",
-          why_now: "Sprint retrospective shapes next month",
-          expected_outcome: "Clearer channel focus",
-        },
-        {
-          title: "Reach out to 3 complementary makers for co-promotion",
-          description: "Newsletter swaps, shoutouts, or joint content.",
-          time_estimate: "1h",
-          priority: "CAN WAIT",
-          status: "pending",
-          why_now: "Expand reach via trusted networks",
-          expected_outcome: "50–200 new eyeballs",
-        },
-      ],
-    },
-  ],
-  expansion_60_day: [
-    "Launch a micro email newsletter for your niche (1 tip/week)",
-    "Apply to be a guest on 3 indie hacker podcasts",
-    "Reach 100 Twitter/X followers via consistent build-in-public content",
-    "Test one paid acquisition channel with a $50 budget",
-    "Start collecting testimonials from early users",
-    "Build a public roadmap to engage your community",
-  ],
-  growth_90_day: [
-    "Prepare and execute Product Hunt launch",
-    "Reach $500 MRR milestone",
-    "Establish weekly publishing cadence (blog + social)",
-    "Build an affiliate or referral program",
-    "Explore content SEO — target 3 high-intent keywords",
-    "Create a case study with your best user story",
-  ],
-  content_ideas: [
-    {
-      title: "I built a marketing AI for indie founders — here's what I learned",
-      format: "Blog post",
-      channel: "Indie Hackers",
-      description:
-        "Honest behind-the-scenes on the product decisions and early traction.",
-    },
-    {
-      title: "5 marketing mistakes indie founders make in their first 30 days",
-      format: "Twitter thread",
-      channel: "Twitter/X",
-      description: "Counterintuitive tips that drive saves and engagement.",
-    },
-    {
-      title: "How I got my first 50 users without spending a dollar on ads",
-      format: "Blog post",
-      channel: "Hacker News",
-      description: "Detailed breakdown designed for a Show HN submission.",
-    },
-    {
-      title: "MarketMyApp demo walkthrough",
-      format: "Loom video",
-      channel: "Twitter/X",
-      description: "2-minute screen recording showing the plan generation flow.",
-    },
-    {
-      title: "The indie founder's marketing checklist",
-      format: "Tweet / lead magnet",
-      channel: "Twitter/X",
-      description: "Shareable checklist that drives profile traffic.",
-    },
-  ],
-  launch_checklist: [
-    "Set up analytics (Plausible or PostHog)",
-    "Write a homepage that leads with the outcome, not features",
-    "Create an Indie Hackers profile and introduce yourself",
-    "Set up a simple email capture",
-    "Create a waitlist or early-access offer",
-    "DM 10 potential users before launch day",
-    "Prepare a Product Hunt asset pack (logo, tagline, GIF demo)",
-    "Draft your launch-day social posts in advance",
-    "Ask 3 friends to upvote and comment on launch day",
-    "Set up a post-launch email sequence for new signups",
-  ],
-  tools_and_budget: [
-    { tool: "Plausible Analytics", cost: "$9/mo", purpose: "Privacy-friendly traffic analytics" },
-    { tool: "Beehiiv", cost: "Free", purpose: "Email newsletter platform" },
-    { tool: "Typefully", cost: "Free / $12.50/mo", purpose: "Schedule Twitter/X threads" },
-    { tool: "Loom", cost: "Free", purpose: "Quick demo and onboarding videos" },
-    { tool: "Canva", cost: "Free", purpose: "Social media graphics" },
-    { tool: "Hotjar", cost: "Free", purpose: "Session recordings to improve UX" },
-  ],
-  metrics_to_track: [
-    {
-      metric: "Weekly new signups",
-      target: "10+ per week by month 2",
-      why: "The leading indicator of growth",
-    },
-    {
-      metric: "Activation rate",
-      target: "> 40%",
-      why: "Shows whether users are getting value",
-    },
-    {
-      metric: "Homepage conversion rate",
-      target: "> 3%",
-      why: "Compounding impact on all traffic",
-    },
-    {
-      metric: "D7 retention",
-      target: "> 25%",
-      why: "Early signal of product-market fit",
-    },
-    {
-      metric: "MRR",
-      target: "$500 by day 90",
-      why: "Revenue validates willingness to pay",
-    },
-    {
-      metric: "Social follower growth",
-      target: "+50/week",
-      why: "Audience is a long-term marketing asset",
-    },
-  ],
-};
-
-const MOCK_APP_NAME = "LaunchKit";
+import { createClient } from "@/lib/supabase/client";
 
 // ─── sidebar sections ──────────────────────────────────────────────────────────
 
@@ -520,8 +205,29 @@ export default function PlanPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const plan = MOCK_PLAN_CONTENT;
-  const appName = MOCK_APP_NAME;
+
+  const [plan, setPlan] = useState<PlanContent | null>(null);
+  const [appName, setAppName] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase
+      .from("plans")
+      .select("plan_content, app_name")
+      .eq("id", id)
+      .single()
+      .then(({ data, error }) => {
+        if (error || !data) {
+          setNotFound(true);
+        } else {
+          setPlan(data.plan_content as PlanContent);
+          setAppName(data.app_name as string);
+        }
+        setLoading(false);
+      });
+  }, [id]);
 
   // Scrollspy
   const [activeSection, setActiveSection] = useState("health-score");
@@ -552,8 +258,24 @@ export default function PlanPage({
     el?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
-  // Suppress unused id warning
-  void id;
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="size-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (notFound || !plan) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4">
+        <p className="text-lg font-semibold text-foreground">Plan not found</p>
+        <Button render={<Link href="/dashboard" />} variant="outline">
+          Back to Dashboard
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
