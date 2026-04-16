@@ -212,8 +212,9 @@ export default function PlanPage({
   const [notFound, setNotFound] = useState(false);
 
   const [committed, setCommitted] = useState(false);
-  const [selectedIndices, setSelectedIndices] = useState<number[]>([0, 1, 2]);
+  const [selectedIndices, setSelectedIndices] = useState<number[]>([]);
   const [committing, setCommitting] = useState(false);
+  const [commitError, setCommitError] = useState<string | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -228,6 +229,9 @@ export default function PlanPage({
         } else {
           setPlan(data.plan_content as PlanContent);
           setAppName(data.app_name as string);
+          setSelectedIndices(
+            (data.plan_content as { this_weeks_top_3: unknown[] }).this_weeks_top_3.map((_, i) => i)
+          );
         }
         setLoading(false);
       });
@@ -273,6 +277,7 @@ export default function PlanPage({
   async function handleCommit() {
     if (selectedIndices.length === 0 || committing) return;
     setCommitting(true);
+    setCommitError(null);
     try {
       const res = await fetch(`/api/plans/${id}/commit`, {
         method: "POST",
@@ -281,7 +286,12 @@ export default function PlanPage({
       });
       if (res.ok) {
         setCommitted(true);
+      } else {
+        const body = await res.json().catch(() => ({}));
+        setCommitError((body as { error?: string }).error ?? "Something went wrong. Try again.");
       }
+    } catch {
+      setCommitError("Network error. Check your connection and try again.");
     } finally {
       setCommitting(false);
     }
@@ -505,6 +515,9 @@ export default function PlanPage({
                     </label>
                   ))}
                 </div>
+                {commitError && (
+                  <p className="text-sm text-destructive mb-3">{commitError}</p>
+                )}
                 <Button
                   onClick={handleCommit}
                   disabled={selectedIndices.length === 0 || committing}
