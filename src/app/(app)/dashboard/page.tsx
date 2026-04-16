@@ -634,6 +634,45 @@ export default function DashboardPage() {
     );
   }
 
+  // New user — no plans generated yet
+  if (state.plans.length === 0) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center px-6">
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="max-w-md w-full text-center space-y-6"
+        >
+          <div className="flex size-14 items-center justify-center rounded-2xl bg-primary/15 mx-auto">
+            <Zap className="size-7 text-primary" />
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold text-foreground">
+              Welcome to MarketMyApp
+            </h1>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Your first marketing plan takes 3 minutes. Find out what&apos;s broken before your launch does.
+            </p>
+          </div>
+          <div className="flex flex-col gap-3">
+            <Button
+              render={<Link href="/plan/new" />}
+              size="lg"
+              className="gap-2 w-full"
+            >
+              <Plus className="size-4" />
+              Generate my first plan
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              Free forever · No card required to start
+            </p>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
   return (
     <div className="px-6 py-8 max-w-5xl mx-auto">
       <motion.div
