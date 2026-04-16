@@ -55,6 +55,7 @@ export default function CheckInPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [notFound, setNotFound] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!weeklyActionId) {
@@ -83,19 +84,30 @@ export default function CheckInPage() {
   async function handleSubmit() {
     if (!weeklyActionId || submitting) return;
     setSubmitting(true);
+    setSubmitError(null);
 
     const updatedActions: ActionItem[] = actions.map((a, i) => ({
       ...a,
       status: statuses[i],
     }));
 
-    await fetch("/api/check-in", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ weeklyActionId, actions: updatedActions }),
-    });
-
-    router.push("/dashboard");
+    try {
+      const res = await fetch("/api/check-in", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ weeklyActionId, actions: updatedActions }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setSubmitError((body as { error?: string }).error ?? "Something went wrong. Try again.");
+        return;
+      }
+      router.push("/dashboard");
+    } catch {
+      setSubmitError("Network error. Check your connection and try again.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   if (loading) {
@@ -194,6 +206,9 @@ export default function CheckInPage() {
       </div>
 
       {/* Summary + submit */}
+      {submitError && (
+        <p className="text-sm text-destructive mb-3">{submitError}</p>
+      )}
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
           {doneCount} of {actions.length} completed
