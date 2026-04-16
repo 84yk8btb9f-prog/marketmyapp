@@ -44,7 +44,12 @@ export async function GET(req: Request) {
       .lt("trial_ends_at", now.toISOString()),
   ]);
 
+  if (day3Res.error) console.error("[cron] Day3 query failed:", day3Res.error.message);
+  if (day5Res.error) console.error("[cron] Day5 query failed:", day5Res.error.message);
+  if (day7Res.error) console.error("[cron] Day7 query failed:", day7Res.error.message);
+
   const sends: Promise<void>[] = [];
+  const downgrades: Promise<unknown>[] = [];
 
   for (const u of day3Res.data ?? []) {
     sends.push(sendEmail(u.email, u.full_name, "day3", APP_URL));
@@ -54,15 +59,27 @@ export async function GET(req: Request) {
   }
   for (const u of day7Res.data ?? []) {
     sends.push(sendEmail(u.email, u.full_name, "day7", APP_URL));
-    // Downgrade expired trial accounts
-    supabase
-      .from("mma_profiles")
-      .update({ plan_tier: "free" })
-      .eq("id", u.id)
-      .then(() => {});
+    // Downgrade expired trial accounts — must be awaited before function returns
+    const uid = u.id;
+    downgrades.push(
+      (async () => {
+        const { error } = await supabase
+          .from("mma_profiles")
+          .update({ plan_tier: "free" })
+          .eq("id", uid);
+        if (error) console.error(`[cron] Downgrade failed for ${uid}:`, error.message);
+      })()
+    );
   }
 
-  await Promise.allSettled(sends);
+  const results = await Promise.allSettled([...sends, ...downgrades]);
+  const failures = results.filter((r) => r.status === "rejected");
+  if (failures.length > 0) {
+    console.error(
+      `[cron] ${failures.length} task(s) failed:`,
+      failures.map((f) => (f as PromiseRejectedResult).reason)
+    );
+  }
 
   return NextResponse.json({
     sent: {
