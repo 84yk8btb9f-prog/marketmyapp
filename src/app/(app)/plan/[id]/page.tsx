@@ -216,6 +216,7 @@ export default function PlanPage({
   const [committing, setCommitting] = useState(false);
   const [commitError, setCommitError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [planTier, setPlanTier] = useState<string>("free");
 
   useEffect(() => {
     const supabase = createClient();
@@ -250,6 +251,21 @@ export default function PlanPage({
         if (data && data.length > 0) setCommitted(true);
       });
   }, [id]);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return;
+      supabase
+        .from("mma_profiles")
+        .select("plan_tier")
+        .eq("id", user.id)
+        .single()
+        .then(({ data }) => {
+          if (data) setPlanTier(data.plan_tier as string);
+        });
+    });
+  }, []);
 
   // Scrollspy
   const [activeSection, setActiveSection] = useState("health-score");
@@ -360,19 +376,30 @@ export default function PlanPage({
           </h1>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled
-            className="gap-1.5 text-xs"
-            title="Pro feature"
-          >
-            <Download className="size-3.5" />
-            <span className="hidden sm:inline">Export PDF</span>
-            <Badge variant="secondary" className="ml-1 text-[10px] h-4 px-1.5">
-              Pro
-            </Badge>
-          </Button>
+          {planTier === "pro" ? (
+            <a
+              href={`/api/plans/${id}/pdf`}
+              download
+              className="inline-flex items-center gap-1.5 rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent transition-colors"
+            >
+              <Download className="size-3.5" />
+              <span className="hidden sm:inline">Export PDF</span>
+            </a>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled
+              className="gap-1.5 text-xs"
+              title="Pro feature"
+            >
+              <Download className="size-3.5" />
+              <span className="hidden sm:inline">Export PDF</span>
+              <Badge variant="secondary" className="ml-1 text-[10px] h-4 px-1.5">
+                Pro
+              </Badge>
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
