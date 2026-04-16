@@ -33,6 +33,10 @@ export async function groqComplete(
 
       if (!res.ok) {
         const errText = await res.text().catch(() => res.status.toString());
+        // Permanent errors: don't try other models
+        if (res.status === 401 || res.status === 400) {
+          throw new Error(`[groq] Fatal ${res.status}: ${errText}`);
+        }
         console.warn(`[groq] ${model} → ${res.status}: ${errText}`);
         continue;
       }
@@ -40,7 +44,9 @@ export async function groqComplete(
       const data = (await res.json()) as {
         choices: { message: { content: string } }[];
       };
-      return data.choices[0].message.content;
+      const content = data.choices?.[0]?.message?.content;
+      if (!content) throw new Error(`[groq] ${model} returned empty choices`);
+      return content;
     } catch (err) {
       console.warn(`[groq] ${model} threw:`, err);
       continue;
