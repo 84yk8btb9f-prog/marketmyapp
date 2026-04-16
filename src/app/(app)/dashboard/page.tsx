@@ -110,6 +110,10 @@ function useDashboardData() {
         .select("current_streak, health_score")
         .single(),
     ]).then(([waRes, plansRes, profileRes]) => {
+      if (waRes.error) console.error("[dashboard] weekly_actions:", waRes.error);
+      if (plansRes.error) console.error("[dashboard] plans:", plansRes.error);
+      if (profileRes.error) console.error("[dashboard] mma_profiles:", profileRes.error);
+
       const waRow = waRes.data?.[0];
       const plansRows = plansRes.data ?? [];
       const profile = profileRes.data;
@@ -155,6 +159,9 @@ function useDashboardData() {
         overallScore: profile?.health_score ?? 0,
         scoreDimensions,
       });
+      setLoading(false);
+    }).catch((err) => {
+      console.error("[dashboard] fetch failed:", err);
       setLoading(false);
     });
   }, []);
