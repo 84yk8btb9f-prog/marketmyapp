@@ -26,8 +26,12 @@ create policy if not exists "mma: users can view own profile" on mma_profiles
 create policy if not exists "mma: users can update own profile" on mma_profiles
   for update using (auth.uid() = id);
 
--- 3. Plans table (create if not exists, or repair FK)
-create table if not exists plans (
+-- 3. Drop and recreate plans/weekly_actions/usage (all empty, fixing broken FK from initial migration)
+drop table if exists weekly_actions;
+drop table if exists usage;
+drop table if exists plans;
+
+create table plans (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references mma_profiles(id) on delete cascade,
   app_name text not null,
@@ -50,7 +54,7 @@ create policy if not exists "mma: users can insert own plans" on plans
   for insert with check (auth.uid() = user_id);
 
 -- 4. Weekly actions
-create table if not exists weekly_actions (
+create table weekly_actions (
   id uuid primary key default gen_random_uuid(),
   plan_id uuid references plans(id) on delete cascade,
   user_id uuid references mma_profiles(id) on delete cascade,
@@ -73,7 +77,7 @@ create policy if not exists "mma: users can update own weekly actions" on weekly
   for update using (auth.uid() = user_id);
 
 -- 5. Usage
-create table if not exists usage (
+create table usage (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references mma_profiles(id) on delete cascade,
   action text not null,
