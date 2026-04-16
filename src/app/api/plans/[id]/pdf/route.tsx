@@ -39,17 +39,27 @@ export async function GET(
     return NextResponse.json({ error: "Plan not found" }, { status: 404 });
   }
 
-  const buffer = await renderToBuffer(
-    React.createElement(PlanDocument, {
-      appName: planRow.app_name as string,
-      plan: planRow.plan_content as PlanContent,
-    }) as ReactElement<DocumentProps, string | JSXElementConstructor<unknown>>
-  );
+  let buffer: Buffer;
+  try {
+    buffer = await renderToBuffer(
+      React.createElement(PlanDocument, {
+        appName: planRow.app_name as string,
+        plan: planRow.plan_content as PlanContent,
+      }) as ReactElement<DocumentProps, string | JSXElementConstructor<unknown>>
+    );
+  } catch (err) {
+    console.error("[pdf] renderToBuffer failed:", err);
+    return NextResponse.json({ error: "PDF generation failed" }, { status: 500 });
+  }
+
+  const safeFilename = (planRow.app_name as string)
+    .replace(/[\r\n]/g, "")
+    .replace(/["/\\]/g, "_");
 
   return new NextResponse(new Uint8Array(buffer), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="${planRow.app_name}-marketing-plan.pdf"`,
+      "Content-Disposition": `attachment; filename="${safeFilename}-marketing-plan.pdf"`,
     },
   });
 }

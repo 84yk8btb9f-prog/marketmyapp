@@ -190,7 +190,7 @@ export function PlanDocument({ appName, plan }: Props) {
           {plan.health_score.encouragement}
         </Text>
 
-        <Text style={styles.sectionTitle}>This Week&apos;s Top 3</Text>
+        <Text style={styles.sectionTitle}>{"This Week's Top 3"}</Text>
         {plan.this_weeks_top_3.map((action, i) => (
           <View key={i} style={styles.actionCard}>
             <Text style={styles.actionTitle}>{action.title}</Text>
