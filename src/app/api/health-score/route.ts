@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { anthropic } from "@/lib/anthropic";
+import { groqComplete } from "@/lib/groq";
 import { buildHealthScorePrompt } from "@/lib/prompts/health-score";
 import type { HealthScoreResult } from "@/types";
 
@@ -32,25 +33,22 @@ export async function POST(request: Request) {
   let rawText: string;
 
   try {
-    const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 1024,
-      messages: [
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-    });
-
-    const block = message.content[0];
-    if (block.type !== "text") {
-      throw new Error("Unexpected response content type from Claude");
+    rawText = await groqComplete(prompt, 1024);
+  } catch (groqErr) {
+    console.warn("[health-score] Groq failed, falling back to Claude:", groqErr);
+    try {
+      const message = await anthropic.messages.create({
+        model: "claude-3-5-sonnet-20241022",
+        max_tokens: 1024,
+        messages: [{ role: "user", content: prompt }],
+      });
+      const block = message.content[0];
+      if (block.type !== "text") throw new Error("Unexpected content type");
+      rawText = block.text;
+    } catch (claudeErr) {
+      const msg = claudeErr instanceof Error ? claudeErr.message : "AI generation failed";
+      return Response.json({ error: msg }, { status: 502 });
     }
-    rawText = block.text;
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Claude API error";
-    return Response.json({ error: message }, { status: 502 });
   }
 
   const cleanedText = rawText

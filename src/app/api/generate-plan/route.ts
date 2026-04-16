@@ -65,7 +65,7 @@ export async function POST(request: Request) {
     console.warn("[generate-plan] Groq failed, falling back to Claude:", groqErr);
     try {
       const message = await anthropic.messages.create({
-        model: "claude-sonnet-4-6",
+        model: "claude-3-5-sonnet-20241022",
         max_tokens: 8192,
         messages: [{ role: "user", content: prompt }],
       });
