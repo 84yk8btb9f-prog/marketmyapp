@@ -18,6 +18,8 @@ import {
   Search,
   MessageSquare,
   Plus,
+  FileText,
+  Activity,
 } from "lucide-react";
 import {
   Card,
@@ -72,6 +74,7 @@ interface DashboardState {
   weeklyActions: DBActionItem[];
   weeklyActionId: string | null;
   plans: PastPlan[];
+  totalPlans: number;
   streak: number;
   overallScore: number;
   scoreDimensions: ScoreDimension[];
@@ -83,6 +86,7 @@ function useDashboardData() {
     weeklyActions: [],
     weeklyActionId: null,
     plans: [],
+    totalPlans: 0,
     streak: 0,
     overallScore: 0,
     scoreDimensions: [],
@@ -104,12 +108,15 @@ function useDashboardData() {
         .from("plans")
         .select("id, app_name, health_score, created_at, plan_content")
         .order("created_at", { ascending: false })
-        .limit(3),
+        .limit(5),
       supabase
         .from("mma_profiles")
         .select("current_streak, health_score")
         .single(),
-    ]).then(([waRes, plansRes, profileRes]) => {
+      supabase
+        .from("plans")
+        .select("id", { count: "exact", head: true }),
+    ]).then(([waRes, plansRes, profileRes, countRes]) => {
       if (waRes.error) console.error("[dashboard] weekly_actions:", waRes.error);
       if (plansRes.error) console.error("[dashboard] plans:", plansRes.error);
       if (profileRes.error) console.error("[dashboard] mma_profiles:", profileRes.error);
@@ -142,6 +149,7 @@ function useDashboardData() {
         weeklyActions: (waRow?.actions as DBActionItem[]) ?? [],
         weeklyActionId: waRow?.id ?? null,
         checkInPlanId: waRow?.plan_id ?? plansRows[0]?.id ?? null,
+        totalPlans: countRes.count ?? 0,
         plans: plansRows.map((p) => ({
           id: p.id,
           name: p.app_name,
@@ -167,6 +175,77 @@ function useDashboardData() {
   }, []);
 
   return { state, loading };
+}
+
+// ─── Stats Row ────────────────────────────────────────────────────────────────
+
+function StatsRow({
+  totalPlans,
+  overallScore,
+  streak,
+}: {
+  totalPlans: number;
+  overallScore: number;
+  streak: number;
+}) {
+  const scoreColor =
+    overallScore >= 70 ? "text-green-400" : overallScore >= 40 ? "text-primary" : "text-amber-400";
+
+  const stats = [
+    {
+      label: "Plans Generated",
+      value: totalPlans,
+      icon: <FileText className="size-4 text-muted-foreground" />,
+      valueClass: "text-foreground",
+      suffix: "",
+    },
+    {
+      label: "Health Score",
+      value: overallScore,
+      icon: <Activity className="size-4 text-muted-foreground" />,
+      valueClass: scoreColor,
+      suffix: "/100",
+    },
+    {
+      label: "Day Streak",
+      value: streak,
+      icon: <Flame className="size-4 text-orange-400" />,
+      valueClass: streak > 0 ? "text-orange-400" : "text-foreground",
+      suffix: "",
+    },
+  ];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: "easeOut", delay: 0.1 }}
+      className="grid grid-cols-3 gap-4 mb-6"
+    >
+      {stats.map((s, i) => (
+        <div
+          key={s.label}
+          className="flex flex-col gap-2 rounded-xl border border-border bg-card px-4 py-3.5"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground font-medium">{s.label}</span>
+            {s.icon}
+          </div>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 + i * 0.05 }}
+            className={`text-2xl font-bold tabular-nums ${s.valueClass}`}
+          >
+            {s.value}
+            {s.suffix && (
+              <span className="text-sm font-normal text-muted-foreground ml-0.5">{s.suffix}</span>
+            )}
+          </motion.div>
+        </div>
+      ))}
+    </motion.div>
+  );
 }
 
 // ─── Utility components ───────────────────────────────────────────────────────
@@ -703,6 +782,12 @@ export default function DashboardPage() {
           </div>
         )}
       </motion.div>
+
+      <StatsRow
+        totalPlans={state.totalPlans}
+        overallScore={state.overallScore}
+        streak={state.streak}
+      />
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
         <div className="space-y-5 lg:col-span-2">

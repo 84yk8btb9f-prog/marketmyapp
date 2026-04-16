@@ -44,20 +44,5 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Gate plan creation behind trial/pro subscription
-  if (user && pathname === "/plan/new") {
-    const { data: profile } = await supabase
-      .from("mma_profiles")
-      .select("plan_tier")
-      .eq("id", user.id)
-      .single();
-
-    if (!profile || profile.plan_tier === "free") {
-      const url = request.nextUrl.clone();
-      url.pathname = "/trial";
-      return NextResponse.redirect(url);
-    }
-  }
-
   return supabaseResponse;
 }
