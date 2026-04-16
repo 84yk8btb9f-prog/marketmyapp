@@ -251,7 +251,7 @@ export default function PlanPage({
     });
 
     return () => observer.disconnect();
-  }, []);
+  }, [plan]);
 
   function scrollTo(sectionId: string) {
     const el = document.getElementById(sectionId);
