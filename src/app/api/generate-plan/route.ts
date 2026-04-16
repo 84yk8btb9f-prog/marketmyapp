@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { anthropic } from "@/lib/anthropic";
+import { groqComplete } from "@/lib/groq";
 import { buildPlanPrompt } from "@/lib/prompts/plan-generation";
 import { createClient } from "@/lib/supabase/server";
 import { resend } from "@/lib/resend";
@@ -56,20 +57,25 @@ export async function POST(request: Request) {
   const input = parsed.data;
   const prompt = buildPlanPrompt(input);
 
-  // Generate with Claude (non-streaming — frontend expects JSON)
+  // Generate — try Groq first, fall back to Claude
   let rawText: string;
   try {
-    const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 4096,
-      messages: [{ role: "user", content: prompt }],
-    });
-    const block = message.content[0];
-    if (block.type !== "text") throw new Error("Unexpected content type");
-    rawText = block.text;
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : "Claude API error";
-    return NextResponse.json({ error: msg }, { status: 502 });
+    rawText = await groqComplete(prompt, 8192);
+  } catch (groqErr) {
+    console.warn("[generate-plan] Groq failed, falling back to Claude:", groqErr);
+    try {
+      const message = await anthropic.messages.create({
+        model: "claude-sonnet-4-6",
+        max_tokens: 4096,
+        messages: [{ role: "user", content: prompt }],
+      });
+      const block = message.content[0];
+      if (block.type !== "text") throw new Error("Unexpected content type");
+      rawText = block.text;
+    } catch (claudeErr) {
+      const msg = claudeErr instanceof Error ? claudeErr.message : "AI generation failed";
+      return NextResponse.json({ error: msg }, { status: 502 });
+    }
   }
 
   let plan: PlanContent;
