@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { ArrowRight, Sparkles, Target, TrendingUp, Zap } from "lucide-react";
+import { ArrowRight, Check, Sparkles, Target, TrendingUp, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -15,7 +15,11 @@ type Stage = "idea" | "building" | "launched" | "growing";
 
 interface AssessmentData {
   appName: string;
+  appDescription: string;
+  targetCustomer: string;
   stage: Stage;
+  currentTraction: string;
+  channelsTried: string[];
   struggle: string;
 }
 
@@ -28,6 +32,7 @@ interface Priority {
 interface HealthScoreResult {
   score: number;
   priorities: Priority[];
+  encouragement?: string;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -37,6 +42,30 @@ const STAGES: { value: Stage; label: string; description: string }[] = [
   { value: "building", label: "Building", description: "Actively in development" },
   { value: "launched", label: "Launched", description: "Live and collecting feedback" },
   { value: "growing", label: "Growing", description: "Scaling with paying users" },
+];
+
+const TRACTION_OPTIONS = [
+  "No users yet",
+  "A few beta users (< 10)",
+  "10–100 users",
+  "100–1,000 users",
+  "1,000+ users",
+  "Some paying customers",
+  "Profitable / growing MRR",
+];
+
+const CHANNEL_OPTIONS = [
+  "Twitter / X",
+  "LinkedIn",
+  "Reddit",
+  "Hacker News",
+  "Product Hunt",
+  "SEO / blog",
+  "Cold email / outreach",
+  "Paid ads",
+  "Communities / Discord",
+  "Word of mouth",
+  "None yet",
 ];
 
 const FADE_UP: Variants = {
@@ -152,14 +181,34 @@ export default function AssessPage() {
   const [step, setStep] = useState(0);
   const [data, setData] = useState<AssessmentData>({
     appName: "",
+    appDescription: "",
+    targetCustomer: "",
     stage: "building",
+    currentTraction: "",
+    channelsTried: [],
     struggle: "",
   });
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<HealthScoreResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const totalSteps = 3;
+  const totalSteps = 5;
+
+  function toggleChannel(channel: string) {
+    setData((d) => {
+      const already = d.channelsTried.includes(channel);
+      if (channel === "None yet") {
+        return { ...d, channelsTried: already ? [] : ["None yet"] };
+      }
+      const without = d.channelsTried.filter((c) => c !== "None yet");
+      return {
+        ...d,
+        channelsTried: already
+          ? without.filter((c) => c !== channel)
+          : [...without, channel],
+      };
+    });
+  }
 
   async function handleSubmit() {
     setLoading(true);
@@ -170,30 +219,35 @@ export default function AssessPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           app_name: data.appName,
+          app_description: data.appDescription,
+          target_customer: data.targetCustomer,
           stage: data.stage,
+          current_traction: data.currentTraction,
+          channels_tried: data.channelsTried,
           biggest_struggle: data.struggle,
         }),
       });
       if (!res.ok) throw new Error("Failed to analyze");
       const json = await res.json();
 
-      // Normalise the response — the API may return priorities as strings or objects
       const rawPriorities: unknown[] = json.top_priorities ?? json.priorities ?? [];
-      const priorities: Priority[] = rawPriorities.map(
-        (p: unknown, i: number) => {
-          if (typeof p === "string") {
-            return { title: p, description: "", icon: PRIORITY_ICONS[i] ?? PRIORITY_ICONS[0] };
-          }
-          const obj = p as Record<string, unknown>;
-          return {
-            title: (obj.title as string) ?? String(p),
-            description: (obj.description as string) ?? "",
-            icon: PRIORITY_ICONS[i] ?? PRIORITY_ICONS[0],
-          };
+      const priorities: Priority[] = rawPriorities.map((p: unknown, i: number) => {
+        if (typeof p === "string") {
+          return { title: p, description: "", icon: PRIORITY_ICONS[i] ?? PRIORITY_ICONS[0] };
         }
-      );
+        const obj = p as Record<string, unknown>;
+        return {
+          title: (obj.title as string) ?? String(p),
+          description: (obj.description as string) ?? "",
+          icon: PRIORITY_ICONS[i] ?? PRIORITY_ICONS[0],
+        };
+      });
 
-      setResult({ score: json.score ?? 0, priorities });
+      setResult({
+        score: json.score ?? 0,
+        priorities,
+        encouragement: json.encouragement as string | undefined,
+      });
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
@@ -203,7 +257,9 @@ export default function AssessPage() {
 
   function canAdvance() {
     if (step === 0) return data.appName.trim().length > 0;
-    if (step === 2) return data.struggle.trim().length > 0;
+    if (step === 1) return data.appDescription.trim().length > 0 && data.targetCustomer.trim().length > 0;
+    if (step === 3) return data.currentTraction.length > 0;
+    if (step === 4) return data.struggle.trim().length > 0;
     return true;
   }
 
@@ -227,9 +283,16 @@ export default function AssessPage() {
         ? "oklch(0.65 0.25 285)"
         : "oklch(0.65 0.2 40)";
 
+    const encouragementText =
+      result.encouragement ??
+      (isHigh
+        ? "You're well-positioned. Now let's sharpen the edges and scale what's working."
+        : isLow
+        ? "Every expert was once a beginner. Here's your personalised roadmap to level up."
+        : "Solid progress. A few targeted actions will move the needle fast.");
+
     return (
       <main className="min-h-screen flex flex-col items-center justify-center px-6 py-20 relative overflow-hidden">
-        {/* Background glow */}
         <div
           aria-hidden
           className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] rounded-full opacity-15 blur-3xl"
@@ -237,7 +300,6 @@ export default function AssessPage() {
         />
 
         <div className="relative z-10 w-full max-w-lg">
-          {/* Confetti */}
           {Array.from({ length: confettiCount }).map((_, i) => (
             <ConfettiParticle key={i} delay={i * 0.04} />
           ))}
@@ -318,7 +380,7 @@ export default function AssessPage() {
             </div>
           </motion.div>
 
-          {/* Encouragement message */}
+          {/* Encouragement from AI */}
           <motion.p
             variants={FADE_UP}
             initial="hidden"
@@ -329,11 +391,7 @@ export default function AssessPage() {
               isHigh ? "text-green-400" : isLow ? "text-amber-400" : "text-muted-foreground"
             )}
           >
-            {isHigh
-              ? "You're well-positioned. Now let's sharpen the edges and scale what's working."
-              : isLow
-              ? "Every expert was once a beginner. Here's your personalised roadmap to level up."
-              : "Solid progress. A few targeted actions will move the needle fast."}
+            {encouragementText}
           </motion.p>
 
           {/* Congrats callout */}
@@ -360,7 +418,7 @@ export default function AssessPage() {
               transition={{ delay: 1.1 }}
               className="mb-8 space-y-3"
             >
-              <h2 className="text-sm font-semibold text-foreground mb-4 text-center uppercase tracking-widest text-muted-foreground">
+              <h2 className="text-sm font-semibold text-center uppercase tracking-widest text-muted-foreground mb-4">
                 Your Top 3 Priorities
               </h2>
               {result.priorities.slice(0, 3).map((p, i) => (
@@ -446,7 +504,6 @@ export default function AssessPage() {
   // ── Assessment steps ─────────────────────────────────────────────────────────
   return (
     <main className="min-h-screen flex flex-col items-center justify-center px-6 py-20 relative overflow-hidden">
-      {/* Ambient glow */}
       <div
         aria-hidden
         className="pointer-events-none absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[350px] rounded-full opacity-10 blur-3xl"
@@ -462,7 +519,7 @@ export default function AssessPage() {
         >
           <span className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3.5 py-1 text-xs font-semibold text-primary mb-4">
             <Sparkles className="size-3" />
-            60-second marketing assessment
+            2-minute marketing assessment
           </span>
           <h1 className="text-2xl font-bold text-foreground">
             Get your Marketing Health Score
@@ -472,15 +529,9 @@ export default function AssessPage() {
         <StepIndicator current={step} total={totalSteps} />
 
         <AnimatePresence mode="wait">
-          {/* Step 1 — App name */}
+          {/* Step 0 — App name */}
           {step === 0 && (
-            <motion.div
-              key="step-0"
-              variants={FADE_UP}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-            >
+            <motion.div key="step-0" variants={FADE_UP} initial="hidden" animate="visible" exit="exit">
               <label className="block text-lg font-semibold text-foreground mb-2">
                 What&apos;s your app called?
               </label>
@@ -492,22 +543,59 @@ export default function AssessPage() {
                 value={data.appName}
                 onChange={(e) => setData((d) => ({ ...d, appName: e.target.value }))}
                 onKeyDown={(e) => e.key === "Enter" && canAdvance() && advance()}
-                placeholder="e.g. LaunchPad, Notion clone, SaaS analytics tool..."
+                placeholder="e.g. Notion clone, SaaS analytics tool..."
                 className="h-12 rounded-xl text-base px-4 mb-6"
                 autoFocus
               />
             </motion.div>
           )}
 
-          {/* Step 2 — Stage */}
+          {/* Step 1 — Description + Target customer */}
           {step === 1 && (
-            <motion.div
-              key="step-1"
-              variants={FADE_UP}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-            >
+            <motion.div key="step-1" variants={FADE_UP} initial="hidden" animate="visible" exit="exit">
+              <label className="block text-lg font-semibold text-foreground mb-2">
+                Tell us about your app
+              </label>
+              <p className="text-sm text-muted-foreground mb-5">
+                Be specific — this is how we score your positioning and audience clarity.
+              </p>
+              <div className="space-y-4 mb-6">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5 block">
+                    What does it do?
+                  </label>
+                  <textarea
+                    value={data.appDescription}
+                    onChange={(e) => setData((d) => ({ ...d, appDescription: e.target.value }))}
+                    placeholder="e.g. A Kanban tool for remote dev teams that integrates with GitHub — shows what your team is actually working on, not just what they say they are."
+                    rows={3}
+                    className={cn(
+                      "w-full rounded-xl border border-input bg-input/30 px-4 py-3 text-sm text-foreground",
+                      "placeholder:text-muted-foreground transition-colors outline-none resize-none",
+                      "focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
+                    )}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5 block">
+                    Who is it for?
+                  </label>
+                  <Input
+                    type="text"
+                    value={data.targetCustomer}
+                    onChange={(e) => setData((d) => ({ ...d, targetCustomer: e.target.value }))}
+                    onKeyDown={(e) => e.key === "Enter" && canAdvance() && advance()}
+                    placeholder="e.g. Freelance designers charging $5k+ projects, B2B SaaS founders at pre-seed..."
+                    className="h-11 rounded-xl text-sm px-4"
+                  />
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Step 2 — Stage */}
+          {step === 2 && (
+            <motion.div key="step-2" variants={FADE_UP} initial="hidden" animate="visible" exit="exit">
               <label className="block text-lg font-semibold text-foreground mb-2">
                 What stage are you at?
               </label>
@@ -534,20 +622,77 @@ export default function AssessPage() {
             </motion.div>
           )}
 
-          {/* Step 3 — Struggle */}
-          {step === 2 && (
-            <motion.div
-              key="step-2"
-              variants={FADE_UP}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-            >
+          {/* Step 3 — Traction + Channels */}
+          {step === 3 && (
+            <motion.div key="step-3" variants={FADE_UP} initial="hidden" animate="visible" exit="exit">
+              <label className="block text-lg font-semibold text-foreground mb-2">
+                Where are you right now?
+              </label>
+              <p className="text-sm text-muted-foreground mb-5">
+                Honest answers give honest scores.
+              </p>
+              <div className="space-y-5 mb-6">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 block">
+                    Current traction
+                  </label>
+                  <div className="flex flex-col gap-2">
+                    {TRACTION_OPTIONS.map((opt) => (
+                      <button
+                        key={opt}
+                        onClick={() => setData((d) => ({ ...d, currentTraction: opt }))}
+                        className={cn(
+                          "flex items-center justify-between rounded-xl border px-4 py-2.5 text-sm text-left transition-all duration-200",
+                          data.currentTraction === opt
+                            ? "border-primary bg-primary/10 text-foreground ring-1 ring-primary/30"
+                            : "border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                        )}
+                      >
+                        {opt}
+                        {data.currentTraction === opt && (
+                          <Check className="size-3.5 text-primary shrink-0" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 block">
+                    Channels tried <span className="normal-case font-normal">(select all that apply)</span>
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {CHANNEL_OPTIONS.map((ch) => {
+                      const selected = data.channelsTried.includes(ch);
+                      return (
+                        <button
+                          key={ch}
+                          onClick={() => toggleChannel(ch)}
+                          className={cn(
+                            "rounded-lg border px-3 py-1.5 text-xs font-medium transition-all duration-200",
+                            selected
+                              ? "border-primary/50 bg-primary/15 text-primary"
+                              : "border-border bg-card text-muted-foreground hover:border-primary/30 hover:text-foreground"
+                          )}
+                        >
+                          {ch}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Step 4 — Biggest struggle */}
+          {step === 4 && (
+            <motion.div key="step-4" variants={FADE_UP} initial="hidden" animate="visible" exit="exit">
               <label className="block text-lg font-semibold text-foreground mb-2">
                 What&apos;s your biggest marketing struggle?
               </label>
               <p className="text-sm text-muted-foreground mb-6">
-                Be specific — the more context you give, the more actionable your plan.
+                Be specific — the more honest you are, the more actionable your plan.
               </p>
               <textarea
                 value={data.struggle}
