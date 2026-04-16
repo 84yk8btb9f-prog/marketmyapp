@@ -29,6 +29,8 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
+import type { ActionItem as DBActionItem } from "@/types";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -54,56 +56,7 @@ interface PastPlan {
   topAction: string;
 }
 
-// ─── Placeholder data ─────────────────────────────────────────────────────────
-
-const INITIAL_ACTIONS: ActionItem[] = [
-  {
-    id: "1",
-    title: "Post a build-in-public update on Twitter/X with your latest milestone",
-    timeEstimate: "20 min",
-    priority: "high",
-    done: false,
-  },
-  {
-    id: "2",
-    title: "Reach out to 5 indie hackers in your niche and ask for feedback",
-    timeEstimate: "45 min",
-    priority: "high",
-    done: false,
-  },
-  {
-    id: "3",
-    title: "Write a short case study about a user who got value from your app",
-    timeEstimate: "1 hr",
-    priority: "medium",
-    done: false,
-  },
-];
-
-const SCORE_DIMENSIONS: ScoreDimension[] = [
-  { label: "Distribution", score: 72, icon: <Share2 className="size-3.5" /> },
-  { label: "Positioning", score: 58, icon: <Target className="size-3.5" /> },
-  { label: "Audience", score: 65, icon: <Users className="size-3.5" /> },
-  { label: "SEO / Discoverability", score: 44, icon: <Search className="size-3.5" /> },
-  { label: "Conversion", score: 81, icon: <TrendingUp className="size-3.5" /> },
-];
-
-const PAST_PLANS: PastPlan[] = [
-  {
-    id: "plan-1",
-    name: "Initial Launch Plan",
-    score: 52,
-    date: "Mar 28, 2026",
-    topAction: "Set up a landing page with a clear value prop",
-  },
-  {
-    id: "plan-2",
-    name: "Growth Sprint #1",
-    score: 67,
-    date: "Apr 3, 2026",
-    topAction: "Launch on Product Hunt",
-  },
-];
+// ─── Quotes (static, not from DB) ────────────────────────────────────────────
 
 const QUOTES = [
   { text: "The best marketing strategy is to actually start.", author: "Seth Godin" },
@@ -113,7 +66,101 @@ const QUOTES = [
   { text: "First, solve the problem. Then, write the code.", author: "John Johnson" },
 ];
 
-const STREAK = 5;
+// ─── Data hook ────────────────────────────────────────────────────────────────
+
+interface DashboardState {
+  weeklyActions: DBActionItem[];
+  weeklyActionId: string | null;
+  plans: PastPlan[];
+  streak: number;
+  overallScore: number;
+  scoreDimensions: ScoreDimension[];
+  checkInPlanId: string | null;
+}
+
+function useDashboardData() {
+  const [state, setState] = useState<DashboardState>({
+    weeklyActions: [],
+    weeklyActionId: null,
+    plans: [],
+    streak: 0,
+    overallScore: 0,
+    scoreDimensions: [],
+    checkInPlanId: null,
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const supabase = createClient();
+    Promise.all([
+      supabase
+        .from("weekly_actions")
+        .select("id, actions, plan_id")
+        .not("committed_at", "is", null)
+        .is("reviewed_at", null)
+        .order("created_at", { ascending: false })
+        .limit(1),
+      supabase
+        .from("plans")
+        .select("id, app_name, health_score, created_at, plan_content")
+        .order("created_at", { ascending: false })
+        .limit(3),
+      supabase
+        .from("mma_profiles")
+        .select("current_streak, health_score")
+        .single(),
+    ]).then(([waRes, plansRes, profileRes]) => {
+      const waRow = waRes.data?.[0];
+      const plansRows = plansRes.data ?? [];
+      const profile = profileRes.data;
+      const latestPlan = plansRows[0];
+
+      const breakdown = latestPlan
+        ? (latestPlan.plan_content as { health_score?: { breakdown?: Record<string, number> } })
+            ?.health_score?.breakdown ?? {}
+        : {};
+      const dimensionIcons: Record<string, React.ReactNode> = {
+        channels: <Share2 className="size-3.5" />,
+        positioning: <Target className="size-3.5" />,
+        audience: <Users className="size-3.5" />,
+        content: <Search className="size-3.5" />,
+        metrics: <TrendingUp className="size-3.5" />,
+      };
+      const scoreDimensions: ScoreDimension[] = Object.entries(breakdown).map(
+        ([key, val]) => ({
+          label: key.charAt(0).toUpperCase() + key.slice(1),
+          score: val as number,
+          icon: dimensionIcons[key] ?? <BarChart2 className="size-3.5" />,
+        })
+      );
+
+      setState({
+        weeklyActions: (waRow?.actions as DBActionItem[]) ?? [],
+        weeklyActionId: waRow?.id ?? null,
+        checkInPlanId: waRow?.plan_id ?? plansRows[0]?.id ?? null,
+        plans: plansRows.map((p) => ({
+          id: p.id,
+          name: p.app_name,
+          score: p.health_score ?? 0,
+          date: new Date(p.created_at).toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          }),
+          topAction: (
+            p.plan_content as { this_weeks_top_3?: { title: string }[] }
+          )?.this_weeks_top_3?.[0]?.title ?? "",
+        })),
+        streak: profile?.current_streak ?? 0,
+        overallScore: profile?.health_score ?? 0,
+        scoreDimensions,
+      });
+      setLoading(false);
+    });
+  }, []);
+
+  return { state, loading };
+}
 
 // ─── Utility components ───────────────────────────────────────────────────────
 
@@ -155,8 +202,40 @@ function ScoreBar({ score, delay = 0 }: { score: number; delay?: number }) {
 
 // ─── Section: This Week's Focus ───────────────────────────────────────────────
 
-function WeeklyFocusSection() {
-  const [actions, setActions] = useState<ActionItem[]>(INITIAL_ACTIONS);
+function WeeklyFocusSection({
+  initialActions,
+  weeklyActionId,
+}: {
+  initialActions: DBActionItem[];
+  weeklyActionId: string | null;
+}) {
+  const [actions, setActions] = useState<ActionItem[]>(
+    initialActions.map((a, i) => ({
+      id: String(i),
+      title: a.title,
+      timeEstimate: a.time_estimate,
+      priority: "medium" as const,
+      done: false,
+    }))
+  );
+
+  if (initialActions.length === 0) {
+    return (
+      <Card>
+        <CardContent className="pt-6 pb-6 text-center">
+          <Calendar className="size-8 text-muted-foreground mx-auto mb-3" />
+          <p className="text-sm font-medium text-foreground mb-1">No actions committed yet</p>
+          <p className="text-xs text-muted-foreground mb-4">
+            Generate a plan and commit to your top 3 to see them here.
+          </p>
+          <Button render={<Link href="/plan/new" />} variant="outline" className="gap-2 text-sm rounded-xl">
+            <Plus className="size-3.5" />
+            Generate a plan
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   function toggleDone(id: string) {
     setActions((prev) =>
@@ -165,6 +244,9 @@ function WeeklyFocusSection() {
   }
 
   const doneCount = actions.filter((a) => a.done).length;
+
+  // Suppress unused variable warning — weeklyActionId reserved for future check-in link
+  void weeklyActionId;
 
   return (
     <Card>
@@ -254,11 +336,13 @@ function WeeklyFocusSection() {
 
 // ─── Section: Health Score ────────────────────────────────────────────────────
 
-function HealthScoreSection() {
-  const overallScore = Math.round(
-    SCORE_DIMENSIONS.reduce((sum, d) => sum + d.score, 0) / SCORE_DIMENSIONS.length
-  );
-
+function HealthScoreSection({
+  overallScore,
+  scoreDimensions,
+}: {
+  overallScore: number;
+  scoreDimensions: ScoreDimension[];
+}) {
   const scoreColor =
     overallScore >= 70
       ? "oklch(0.65 0.2 160)"
@@ -326,7 +410,7 @@ function HealthScoreSection() {
 
         {/* Dimension bars */}
         <div className="space-y-3">
-          {SCORE_DIMENSIONS.map((dim, i) => (
+          {scoreDimensions.map((dim, i) => (
             <div key={dim.label} className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -357,7 +441,7 @@ function HealthScoreSection() {
 
 // ─── Section: Streak ─────────────────────────────────────────────────────────
 
-function StreakSection() {
+function StreakSection({ streak }: { streak: number }) {
   return (
     <Card>
       <CardContent className="pt-4">
@@ -372,7 +456,7 @@ function StreakSection() {
           </motion.div>
           <div>
             <p className="text-2xl font-bold text-foreground leading-none">
-              {STREAK}{" "}
+              {streak}{" "}
               <span className="text-base font-semibold text-orange-400">day streak</span>
             </p>
             <p className="text-xs text-muted-foreground mt-1">
@@ -387,7 +471,7 @@ function StreakSection() {
               key={i}
               className={cn(
                 "flex-1 h-1.5 rounded-full transition-colors",
-                i < STREAK ? "bg-orange-400" : "bg-border"
+                i < streak ? "bg-orange-400" : "bg-border"
               )}
             />
           ))}
@@ -400,7 +484,7 @@ function StreakSection() {
 
 // ─── Section: Plan History ────────────────────────────────────────────────────
 
-function PlanHistorySection() {
+function PlanHistorySection({ plans }: { plans: PastPlan[] }) {
   return (
     <Card>
       <CardHeader>
@@ -421,7 +505,7 @@ function PlanHistorySection() {
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        {PAST_PLANS.map((plan, i) => (
+        {plans.map((plan, i) => (
           <motion.div
             key={plan.id}
             initial={{ opacity: 0, y: 8 }}
@@ -453,7 +537,7 @@ function PlanHistorySection() {
             </div>
           </motion.div>
         ))}
-        {PAST_PLANS.length === 0 && (
+        {plans.length === 0 && (
           <p className="text-sm text-muted-foreground text-center py-4">
             No plans yet.{" "}
             <Link href="/plan/new" className="text-primary underline underline-offset-4">
@@ -533,9 +617,18 @@ function QuoteSection() {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
+  const { state, loading } = useDashboardData();
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="size-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
   return (
     <div className="px-6 py-8 max-w-5xl mx-auto">
-      {/* Page header */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -546,19 +639,39 @@ export default function DashboardPage() {
         <p className="text-sm text-muted-foreground mt-1">
           Your marketing command centre — what to do, and why.
         </p>
+        {/* Check-in prompt */}
+        {state.weeklyActionId && (
+          <div className="mt-4 flex items-center gap-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3">
+            <Calendar className="size-4 text-primary shrink-0" />
+            <p className="text-sm text-foreground flex-1">
+              Time to check in on last week&apos;s commitments.
+            </p>
+            <Button
+              render={<Link href={`/check-in?id=${state.weeklyActionId}`} />}
+              size="sm"
+              variant="outline"
+              className="shrink-0 text-xs"
+            >
+              Check in →
+            </Button>
+          </div>
+        )}
       </motion.div>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-        {/* Left column — main content */}
         <div className="space-y-5 lg:col-span-2">
-          <WeeklyFocusSection />
-          <PlanHistorySection />
+          <WeeklyFocusSection
+            initialActions={state.weeklyActions}
+            weeklyActionId={state.weeklyActionId}
+          />
+          <PlanHistorySection plans={state.plans} />
         </div>
-
-        {/* Right column — widgets */}
         <div className="space-y-5">
-          <StreakSection />
-          <HealthScoreSection />
+          <StreakSection streak={state.streak} />
+          <HealthScoreSection
+            overallScore={state.overallScore}
+            scoreDimensions={state.scoreDimensions}
+          />
           <QuoteSection />
         </div>
       </div>
