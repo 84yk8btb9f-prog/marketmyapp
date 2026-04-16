@@ -29,15 +29,34 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Protect /dashboard routes — redirect to login if not authenticated
+  const pathname = request.nextUrl.pathname;
+
+  // Redirect unauthenticated users away from app pages
   if (
     !user &&
-    (request.nextUrl.pathname.startsWith("/dashboard") ||
-      request.nextUrl.pathname.startsWith("/plan"))
+    (pathname.startsWith("/dashboard") ||
+      pathname.startsWith("/plan") ||
+      pathname.startsWith("/plans") ||
+      pathname.startsWith("/settings"))
   ) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
+  }
+
+  // Gate plan creation behind trial/pro subscription
+  if (user && pathname === "/plan/new") {
+    const { data: profile } = await supabase
+      .from("mma_profiles")
+      .select("plan_tier")
+      .eq("id", user.id)
+      .single();
+
+    if (!profile || profile.plan_tier === "free") {
+      const url = request.nextUrl.clone();
+      url.pathname = "/trial";
+      return NextResponse.redirect(url);
+    }
   }
 
   return supabaseResponse;
