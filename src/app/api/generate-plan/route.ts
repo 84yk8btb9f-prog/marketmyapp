@@ -78,12 +78,18 @@ export async function POST(request: Request) {
     }
   }
 
+  // Strip markdown code fences if the model wrapped the JSON
+  const cleanedText = rawText
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/, "")
+    .trim();
+
   let plan: PlanContent;
   try {
-    plan = JSON.parse(rawText) as PlanContent;
+    plan = JSON.parse(cleanedText) as PlanContent;
   } catch {
     return NextResponse.json(
-      { error: "Failed to parse plan JSON", raw: rawText },
+      { error: "Failed to parse plan JSON", raw: cleanedText },
       { status: 502 }
     );
   }

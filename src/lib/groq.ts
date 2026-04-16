@@ -3,8 +3,8 @@ const GROQ_BASE = "https://api.groq.com/openai/v1";
 // Priority: best reasoning → versatile → fallback
 const GROQ_MODELS = [
   "moonshotai/kimi-k2-instruct",
-  "openai/gpt-oss-120b",
-  "qwen/qwen3-32b",
+  "llama-3.3-70b-versatile",
+  "llama3-70b-8192",
 ];
 
 export async function groqComplete(
@@ -40,8 +40,8 @@ export async function groqComplete(
     // --- status check (outside try — fatal errors propagate up) ---
     if (!res.ok) {
       const errText = await res.text().catch(() => res.status.toString());
-      if (res.status === 401 || res.status === 400) {
-        throw new Error(`[groq] Fatal ${res.status}: ${errText}`);
+      if (res.status === 401) {
+        throw new Error(`[groq] Fatal auth failure: ${errText}`);
       }
       console.warn(`[groq] ${model} → ${res.status}: ${errText}`);
       continue;
