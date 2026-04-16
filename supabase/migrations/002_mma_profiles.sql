@@ -1,5 +1,4 @@
 -- MarketMyApp profiles table (separate from PadelUp's profiles table)
--- Safe to run on a shared Supabase project
 
 -- 1. Create mma_profiles
 create table if not exists mma_profiles (
@@ -20,13 +19,15 @@ create table if not exists mma_profiles (
 -- 2. RLS
 alter table mma_profiles enable row level security;
 
-create policy if not exists "mma: users can view own profile" on mma_profiles
+drop policy if exists "mma: users can view own profile" on mma_profiles;
+create policy "mma: users can view own profile" on mma_profiles
   for select using (auth.uid() = id);
 
-create policy if not exists "mma: users can update own profile" on mma_profiles
+drop policy if exists "mma: users can update own profile" on mma_profiles;
+create policy "mma: users can update own profile" on mma_profiles
   for update using (auth.uid() = id);
 
--- 3. Drop and recreate plans/weekly_actions/usage (all empty, fixing broken FK from initial migration)
+-- 3. Drop and recreate plans/weekly_actions/usage (all empty, fixing broken FK)
 drop table if exists weekly_actions;
 drop table if exists usage;
 drop table if exists plans;
@@ -47,10 +48,10 @@ create table plans (
 
 alter table plans enable row level security;
 
-create policy if not exists "mma: users can view own plans" on plans
+create policy "mma: users can view own plans" on plans
   for select using (auth.uid() = user_id);
 
-create policy if not exists "mma: users can insert own plans" on plans
+create policy "mma: users can insert own plans" on plans
   for insert with check (auth.uid() = user_id);
 
 -- 4. Weekly actions
@@ -67,13 +68,13 @@ create table weekly_actions (
 
 alter table weekly_actions enable row level security;
 
-create policy if not exists "mma: users can view own weekly actions" on weekly_actions
+create policy "mma: users can view own weekly actions" on weekly_actions
   for select using (auth.uid() = user_id);
 
-create policy if not exists "mma: users can insert own weekly actions" on weekly_actions
+create policy "mma: users can insert own weekly actions" on weekly_actions
   for insert with check (auth.uid() = user_id);
 
-create policy if not exists "mma: users can update own weekly actions" on weekly_actions
+create policy "mma: users can update own weekly actions" on weekly_actions
   for update using (auth.uid() = user_id);
 
 -- 5. Usage
@@ -87,10 +88,10 @@ create table usage (
 
 alter table usage enable row level security;
 
-create policy if not exists "mma: users can insert own usage" on usage
+create policy "mma: users can insert own usage" on usage
   for insert with check (auth.uid() = user_id);
 
--- 6. Auto-create mma_profile on signup (separate trigger from PadelUp's)
+-- 6. Auto-create mma_profile on signup
 create or replace function public.handle_new_mma_user()
 returns trigger as $$
 begin
