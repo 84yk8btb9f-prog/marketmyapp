@@ -53,13 +53,18 @@ export async function POST(request: Request) {
     return Response.json({ error: message }, { status: 502 });
   }
 
+  const cleanedText = rawText
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/, "")
+    .trim();
+
   let result: HealthScoreResult;
 
   try {
-    result = JSON.parse(rawText) as HealthScoreResult;
+    result = JSON.parse(cleanedText) as HealthScoreResult;
   } catch {
     return Response.json(
-      { error: "Failed to parse Claude response as JSON", raw: rawText },
+      { error: "Failed to parse Claude response as JSON", raw: cleanedText },
       { status: 502 }
     );
   }
