@@ -211,6 +211,10 @@ export default function PlanPage({
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
+  const [committed, setCommitted] = useState(false);
+  const [selectedIndices, setSelectedIndices] = useState<number[]>([0, 1, 2]);
+  const [committing, setCommitting] = useState(false);
+
   useEffect(() => {
     const supabase = createClient();
     supabase
@@ -226,6 +230,19 @@ export default function PlanPage({
           setAppName(data.app_name as string);
         }
         setLoading(false);
+      });
+  }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+    const supabase = createClient();
+    supabase
+      .from("weekly_actions")
+      .select("id")
+      .eq("plan_id", id)
+      .limit(1)
+      .then(({ data }) => {
+        if (data && data.length > 0) setCommitted(true);
       });
   }, [id]);
 
@@ -252,6 +269,23 @@ export default function PlanPage({
 
     return () => observer.disconnect();
   }, [plan]);
+
+  async function handleCommit() {
+    if (selectedIndices.length === 0 || committing) return;
+    setCommitting(true);
+    try {
+      const res = await fetch(`/api/plans/${id}/commit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ selectedIndices }),
+      });
+      if (res.ok) {
+        setCommitted(true);
+      }
+    } finally {
+      setCommitting(false);
+    }
+  }
 
   function scrollTo(sectionId: string) {
     const el = document.getElementById(sectionId);
@@ -420,6 +454,83 @@ export default function PlanPage({
                 </div>
               </CardContent>
             </Card>
+          </section>
+
+          {/* Commitment Section */}
+          <section>
+            {!committed ? (
+              <div className="rounded-2xl border border-primary/30 bg-primary/5 p-6 mb-2">
+                <div className="flex items-center gap-2.5 mb-3">
+                  <div className="size-8 rounded-lg bg-primary/15 flex items-center justify-center shrink-0">
+                    <Target className="size-4 text-primary" />
+                  </div>
+                  <h2 className="text-base font-semibold text-foreground">
+                    Commit to Your Top 3
+                  </h2>
+                </div>
+                <p className="text-sm text-muted-foreground mb-5">
+                  Select the actions you commit to completing this week. They&apos;ll appear on your dashboard.
+                </p>
+                <div className="space-y-2 mb-5">
+                  {plan.this_weeks_top_3.map((action, i) => (
+                    <label
+                      key={i}
+                      className={cn(
+                        "flex items-start gap-3 rounded-xl border p-3.5 cursor-pointer transition-all",
+                        selectedIndices.includes(i)
+                          ? "border-primary/40 bg-primary/10"
+                          : "border-border hover:border-primary/20 hover:bg-muted/30"
+                      )}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedIndices.includes(i)}
+                        onChange={() =>
+                          setSelectedIndices((prev) =>
+                            prev.includes(i)
+                              ? prev.filter((x) => x !== i)
+                              : [...prev, i]
+                          )
+                        }
+                        className="mt-0.5 size-4 accent-primary shrink-0"
+                      />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-foreground leading-snug">
+                          {action.title}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {action.time_estimate}
+                        </p>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+                <Button
+                  onClick={handleCommit}
+                  disabled={selectedIndices.length === 0 || committing}
+                  className="gap-2"
+                >
+                  {committing
+                    ? "Saving…"
+                    : `Commit to ${selectedIndices.length} action${selectedIndices.length !== 1 ? "s" : ""}`}
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 rounded-xl border border-green-500/30 bg-green-500/5 px-4 py-3 mb-2">
+                <CheckCircle2 className="size-4 text-green-400 shrink-0" />
+                <p className="text-sm font-medium text-foreground flex-1">
+                  You&apos;ve committed to this week&apos;s actions.
+                </p>
+                <Button
+                  render={<Link href="/dashboard" />}
+                  variant="link"
+                  size="sm"
+                  className="text-primary shrink-0 h-auto p-0 text-xs"
+                >
+                  View on dashboard →
+                </Button>
+              </div>
+            )}
           </section>
 
           {/* This Week's Top 3 */}
