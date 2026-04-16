@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { track } from "@vercel/analytics";
 import { motion, AnimatePresence } from "framer-motion";
 import { Zap, ChevronRight, ChevronLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
@@ -554,6 +555,7 @@ export default function NewPlanPage() {
       });
       if (!res.ok) throw new Error("Failed to generate plan.");
       const data = await res.json();
+      track("plan_generated", { app_name: form.app_name as string });
       router.push(`/plan/${data.id}`);
     } catch {
       setError("Something went wrong. Please try again.");

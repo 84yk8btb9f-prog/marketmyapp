@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { track } from "@vercel/analytics";
 import { loadStripe } from "@stripe/stripe-js";
 import {
   Elements,
@@ -115,6 +116,7 @@ function CheckoutForm() {
       return;
     }
 
+    track("trial_started");
     router.push("/dashboard");
   }
 

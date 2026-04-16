@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useEffect, useRef, useState } from "react";
+import { track } from "@vercel/analytics";
 import { motion } from "framer-motion";
 import {
   Zap,
@@ -325,6 +326,7 @@ export default function PlanPage({
       });
       if (res.ok) {
         setCommitted(true);
+        track("commitment_made");
       } else {
         const body = await res.json().catch(() => ({}));
         setCommitError((body as { error?: string }).error ?? "Something went wrong. Try again.");
@@ -380,6 +382,7 @@ export default function PlanPage({
             <a
               href={`/api/plans/${id}/pdf`}
               download
+              onClick={() => track("pdf_exported")}
               className="inline-flex items-center gap-1.5 rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent transition-colors"
             >
               <Download className="size-3.5" />

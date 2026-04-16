@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { track } from "@vercel/analytics";
 import { motion } from "framer-motion";
 import { CheckCircle2, Clock, SkipForward, Loader2, Zap } from "lucide-react";
 import Link from "next/link";
@@ -102,6 +103,7 @@ export function CheckInContent() {
         setSubmitError((body as { error?: string }).error ?? "Something went wrong. Try again.");
         return;
       }
+      track("check_in_completed");
       router.push("/dashboard");
     } catch {
       setSubmitError("Network error. Check your connection and try again.");
