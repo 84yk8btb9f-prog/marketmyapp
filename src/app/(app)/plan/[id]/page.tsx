@@ -274,6 +274,11 @@ export default function PlanPage({
     return () => observer.disconnect();
   }, [plan]);
 
+  async function handleShare() {
+    const url = `${window.location.origin}/plan/${id}`;
+    await navigator.clipboard.writeText(url);
+  }
+
   async function handleCommit() {
     if (selectedIndices.length === 0 || committing) return;
     setCommitting(true);
@@ -350,7 +355,12 @@ export default function PlanPage({
               Pro
             </Badge>
           </Button>
-          <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 text-xs"
+            onClick={handleShare}
+          >
             <Share2 className="size-3.5" />
             <span className="hidden sm:inline">Share</span>
           </Button>
