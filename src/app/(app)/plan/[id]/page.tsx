@@ -215,6 +215,7 @@ export default function PlanPage({
   const [selectedIndices, setSelectedIndices] = useState<number[]>([]);
   const [committing, setCommitting] = useState(false);
   const [commitError, setCommitError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
@@ -276,7 +277,24 @@ export default function PlanPage({
 
   async function handleShare() {
     const url = `${window.location.origin}/plan/${id}`;
-    await navigator.clipboard.writeText(url);
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        const el = document.createElement("textarea");
+        el.value = url;
+        el.style.position = "fixed";
+        el.style.opacity = "0";
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand("copy");
+        document.body.removeChild(el);
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      window.prompt("Copy this link:", url);
+    }
   }
 
   async function handleCommit() {
@@ -362,7 +380,7 @@ export default function PlanPage({
             onClick={handleShare}
           >
             <Share2 className="size-3.5" />
-            <span className="hidden sm:inline">Share</span>
+            <span className="hidden sm:inline">{copied ? "Copied!" : "Share"}</span>
           </Button>
         </div>
       </header>

@@ -4,7 +4,8 @@ export const runtime = "edge";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const score = Math.min(100, Math.max(0, Number(searchParams.get("score") ?? 0)));
+  const rawScore = Number(searchParams.get("score") ?? 0);
+  const score = Math.min(100, Math.max(0, isNaN(rawScore) ? 0 : rawScore));
   const app = (searchParams.get("app") ?? "My App").slice(0, 40);
 
   const color =
