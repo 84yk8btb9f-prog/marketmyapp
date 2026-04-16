@@ -15,7 +15,7 @@ export async function POST(req: Request) {
   const { paymentMethodId } = await req.json();
 
   const { data: profile } = await supabase
-    .from("profiles")
+    .from("mma_profiles")
     .select("stripe_customer_id")
     .eq("id", user.id)
     .single();
@@ -40,7 +40,7 @@ export async function POST(req: Request) {
   const trialEnd = new Date(subscription.trial_end! * 1000).toISOString();
 
   await supabase
-    .from("profiles")
+    .from("mma_profiles")
     .update({
       stripe_subscription_id: subscription.id,
       plan_tier: "trial",

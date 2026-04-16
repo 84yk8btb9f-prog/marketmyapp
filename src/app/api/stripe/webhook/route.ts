@@ -38,7 +38,7 @@ export async function POST(req: Request) {
     }
 
     await supabase
-      .from("profiles")
+      .from("mma_profiles")
       .update({ plan_tier, stripe_subscription_id: subscription.id })
       .eq("stripe_customer_id", customerId);
   }
