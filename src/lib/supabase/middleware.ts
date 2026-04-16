@@ -31,12 +31,11 @@ export async function updateSession(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
 
-  // Redirect unauthenticated users away from app pages
+  // Redirect unauthenticated users away from auth-required pages
+  // /plan and /plans are intentionally public — no login needed
   if (
     !user &&
     (pathname.startsWith("/dashboard") ||
-      pathname.startsWith("/plan") ||
-      pathname.startsWith("/plans") ||
       pathname.startsWith("/settings") ||
       pathname.startsWith("/admin"))
   ) {

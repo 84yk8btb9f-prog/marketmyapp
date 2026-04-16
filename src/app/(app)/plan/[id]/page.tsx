@@ -212,6 +212,7 @@ export default function PlanPage({
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
+  const [authed, setAuthed] = useState(false);
   const [committed, setCommitted] = useState(false);
   const [selectedIndices, setSelectedIndices] = useState<number[]>([]);
   const [committing, setCommitting] = useState(false);
@@ -219,44 +220,37 @@ export default function PlanPage({
   const [copied, setCopied] = useState(false);
   const [planTier, setPlanTier] = useState<string>("free");
 
+  // Fetch plan via public API — no auth required
   useEffect(() => {
-    const supabase = createClient();
-    supabase
-      .from("plans")
-      .select("plan_content, app_name")
-      .eq("id", id)
-      .single()
-      .then(({ data, error }) => {
-        if (error || !data) {
-          setNotFound(true);
-        } else {
-          setPlan(data.plan_content as PlanContent);
-          setAppName(data.app_name as string);
-          setSelectedIndices(
-            (data.plan_content as { this_weeks_top_3: unknown[] }).this_weeks_top_3.map((_, i) => i)
-          );
-        }
-        setLoading(false);
-      });
+    fetch(`/api/plans/${id}`)
+      .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
+      .then((data: { plan_content: PlanContent; app_name: string }) => {
+        setPlan(data.plan_content);
+        setAppName(data.app_name);
+        setSelectedIndices(data.plan_content.this_weeks_top_3.map((_, i) => i));
+      })
+      .catch(() => setNotFound(true))
+      .finally(() => setLoading(false));
   }, [id]);
 
-  useEffect(() => {
-    if (!id) return;
-    const supabase = createClient();
-    supabase
-      .from("weekly_actions")
-      .select("id")
-      .eq("plan_id", id)
-      .limit(1)
-      .then(({ data }) => {
-        if (data && data.length > 0) setCommitted(true);
-      });
-  }, [id]);
-
+  // Auth-dependent checks — only run when user is signed in
   useEffect(() => {
     const supabase = createClient();
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return;
+      setAuthed(true);
+
+      // Check if already committed
+      supabase
+        .from("weekly_actions")
+        .select("id")
+        .eq("plan_id", id)
+        .limit(1)
+        .then(({ data }) => {
+          if (data && data.length > 0) setCommitted(true);
+        });
+
+      // Fetch plan tier
       supabase
         .from("mma_profiles")
         .select("plan_tier")
@@ -266,7 +260,7 @@ export default function PlanPage({
           if (data) setPlanTier(data.plan_tier as string);
         });
     });
-  }, []);
+  }, [id]);
 
   // Scrollspy
   const [activeSection, setActiveSection] = useState("health-score");
@@ -524,8 +518,8 @@ export default function PlanPage({
             </Card>
           </section>
 
-          {/* Commitment Section */}
-          <section>
+          {/* Commitment Section — only shown when signed in */}
+          {authed && <section>
             {!committed ? (
               <div className="rounded-2xl border border-primary/30 bg-primary/5 p-6 mb-2">
                 <div className="flex items-center gap-2.5 mb-3">
@@ -602,7 +596,7 @@ export default function PlanPage({
                 </Button>
               </div>
             )}
-          </section>
+          </section>}
 
           {/* This Week's Top 3 */}
           <section>

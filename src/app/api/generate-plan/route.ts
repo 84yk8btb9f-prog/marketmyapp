@@ -4,6 +4,7 @@ import { anthropic } from "@/lib/anthropic";
 import { groqComplete } from "@/lib/groq";
 import { buildPlanPrompt } from "@/lib/prompts/plan-generation";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { resend } from "@/lib/resend";
 import type { PlanContent, ActionItem } from "@/types";
 
@@ -28,15 +29,11 @@ const PlanInputSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  // Auth
+  // Auth — optional. Plans can be generated without an account.
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
 
   // Parse input
   let body: unknown;
@@ -94,11 +91,12 @@ export async function POST(request: Request) {
     );
   }
 
-  // Save to DB
-  const { data: savedPlan, error: dbError } = await supabase
+  // Save to DB via service client (bypasses RLS — works for anonymous users too)
+  const service = createServiceClient();
+  const { data: savedPlan, error: dbError } = await service
     .from("plans")
     .insert({
-      user_id: user.id,
+      user_id: user?.id ?? null,
       app_name: input.app_name,
       input_data: input,
       plan_content: plan,
@@ -112,13 +110,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Failed to save plan" }, { status: 500 });
   }
 
-  // Send email — fire and forget, never block the response
-  sendPlanEmail(
-    user.email!,
-    input.app_name,
-    savedPlan.id,
-    plan
-  ).catch(() => {});
+  // Send email only for authenticated users with an email address
+  if (user?.email) {
+    sendPlanEmail(user.email, input.app_name, savedPlan.id, plan).catch(() => {});
+  }
 
   return NextResponse.json({ id: savedPlan.id });
 }
