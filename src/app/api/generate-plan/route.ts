@@ -6,6 +6,7 @@ import { buildPlanPrompt } from "@/lib/prompts/plan-generation";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { resend } from "@/lib/resend";
+import { generatePlanLimiter, checkRateLimit, getIP } from "@/lib/ratelimit";
 import type { PlanContent, ActionItem } from "@/types";
 
 const PlanInputSchema = z.object({
@@ -29,6 +30,10 @@ const PlanInputSchema = z.object({
 });
 
 export async function POST(request: Request) {
+  // Rate limit by IP — this endpoint calls expensive AI APIs and is unauthenticated
+  const rateLimitResponse = await checkRateLimit(generatePlanLimiter, `generate-plan:${getIP(request)}`);
+  if (rateLimitResponse) return rateLimitResponse;
+
   // Auth — optional. Plans can be generated without an account.
   const supabase = await createClient();
   const {
@@ -85,8 +90,9 @@ export async function POST(request: Request) {
   try {
     plan = JSON.parse(cleanedText) as PlanContent;
   } catch {
+    console.error("[generate-plan] Failed to parse AI response as JSON:", cleanedText.slice(0, 200));
     return NextResponse.json(
-      { error: "Failed to parse plan JSON", raw: cleanedText },
+      { error: "Failed to generate plan. Please try again." },
       { status: 502 }
     );
   }

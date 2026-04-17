@@ -47,7 +47,7 @@ export default function SettingsPage() {
         .single();
       setProfile(data);
       setLoading(false);
-    });
+    }).catch(() => setLoading(false));
   }, [router]);
 
   async function handleCancel() {

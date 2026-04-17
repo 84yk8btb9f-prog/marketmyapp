@@ -236,30 +236,31 @@ export default function PlanPage({
   // Auth-dependent checks — only run when user is signed in
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) return;
-      setAuthed(true);
+    (async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        setAuthed(true);
 
-      // Check if already committed
-      supabase
-        .from("weekly_actions")
-        .select("id")
-        .eq("plan_id", id)
-        .limit(1)
-        .then(({ data }) => {
-          if (data && data.length > 0) setCommitted(true);
-        });
+        // Check if already committed
+        const { data: waData } = await supabase
+          .from("weekly_actions")
+          .select("id")
+          .eq("plan_id", id)
+          .limit(1);
+        if (waData && waData.length > 0) setCommitted(true);
 
-      // Fetch plan tier
-      supabase
-        .from("mma_profiles")
-        .select("plan_tier")
-        .eq("id", user.id)
-        .single()
-        .then(({ data }) => {
-          if (data) setPlanTier(data.plan_tier as string);
-        });
-    });
+        // Fetch plan tier
+        const { data: profileData } = await supabase
+          .from("mma_profiles")
+          .select("plan_tier")
+          .eq("id", user.id)
+          .single();
+        if (profileData) setPlanTier(profileData.plan_tier as string);
+      } catch {
+        // Non-critical — auth features silently degrade
+      }
+    })();
   }, [id]);
 
   // Scrollspy

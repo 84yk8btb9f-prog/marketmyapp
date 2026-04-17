@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-
-const ADMIN_EMAIL = "nikolas.sapalidis@gmail.com";
+import { ADMIN_EMAIL } from "@/lib/admin";
 
 async function assertAdmin() {
   const supabase = await createClient();
@@ -25,10 +24,12 @@ export async function GET() {
     .select(
       "id, email, full_name, plan_tier, health_score, current_streak, longest_streak, plans_generated, trial_ends_at, created_at"
     )
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(500);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("[admin] users fetch failed:", error.message);
+    return NextResponse.json({ error: "Failed to load users" }, { status: 500 });
   }
 
   return NextResponse.json({ users: data });

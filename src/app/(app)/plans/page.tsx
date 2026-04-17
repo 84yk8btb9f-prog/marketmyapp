@@ -22,14 +22,19 @@ export default function PlansPage() {
 
   useEffect(() => {
     const supabase = createClient();
-    supabase
-      .from("plans")
-      .select("id, app_name, health_score, created_at")
-      .order("created_at", { ascending: false })
-      .then(({ data }) => {
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from("plans")
+          .select("id, app_name, health_score, created_at")
+          .order("created_at", { ascending: false });
         setPlans(data ?? []);
+      } catch {
+        // leave plans as empty array
+      } finally {
         setLoading(false);
-      });
+      }
+    })();
   }, []);
 
   return (

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { commitLimiter, checkRateLimit } from "@/lib/ratelimit";
 import type { ActionItem, PlanContent } from "@/types";
 
 export async function POST(
@@ -13,6 +14,9 @@ export async function POST(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const rateLimitResponse = await checkRateLimit(commitLimiter, `commit:${user.id}`);
+  if (rateLimitResponse) return rateLimitResponse;
 
   let body: { selectedIndices: unknown };
   try {

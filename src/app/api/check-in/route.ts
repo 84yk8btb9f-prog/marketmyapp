@@ -1,6 +1,23 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { checkInLimiter, checkRateLimit } from "@/lib/ratelimit";
 import type { ActionItem } from "@/types";
+
+const ActionItemSchema = z.object({
+  title: z.string(),
+  description: z.string(),
+  time_estimate: z.string(),
+  priority: z.enum(["MUST DO", "SHOULD DO", "CAN WAIT"]),
+  status: z.enum(["pending", "done", "skipped", "in_progress"]),
+  why_now: z.string(),
+  expected_outcome: z.string(),
+});
+
+const CheckInSchema = z.object({
+  weeklyActionId: z.string().uuid(),
+  actions: z.array(ActionItemSchema).min(1).max(10),
+});
 
 export async function POST(req: Request) {
   const supabase = await createClient();
@@ -9,20 +26,22 @@ export async function POST(req: Request) {
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  let weeklyActionId: string;
-  let actions: ActionItem[];
+  const rateLimitResponse = await checkRateLimit(checkInLimiter, `check-in:${user.id}`);
+  if (rateLimitResponse) return rateLimitResponse;
+
+  let body: unknown;
   try {
-    ({ weeklyActionId, actions } = (await req.json()) as {
-      weeklyActionId: string;
-      actions: ActionItem[];
-    });
+    body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
-  if (!weeklyActionId || !Array.isArray(actions)) {
-    return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+  const parsed = CheckInSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid payload" }, { status: 422 });
   }
+
+  const { weeklyActionId, actions } = parsed.data as { weeklyActionId: string; actions: ActionItem[] };
 
   const { error } = await supabase
     .from("weekly_actions")

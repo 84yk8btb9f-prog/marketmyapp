@@ -23,12 +23,18 @@ export async function POST() {
     return NextResponse.json({ error: "No active subscription" }, { status: 400 });
   }
 
-  await stripe.subscriptions.cancel(subscriptionId);
+  try {
+    await stripe.subscriptions.cancel(subscriptionId);
 
-  await supabase
-    .from("mma_profiles")
-    .update({ plan_tier: "free", stripe_subscription_id: null })
-    .eq("id", user.id);
+    await supabase
+      .from("mma_profiles")
+      .update({ plan_tier: "free", stripe_subscription_id: null })
+      .eq("id", user.id);
 
-  return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Stripe error";
+    console.error("[cancel-subscription] Stripe error:", message);
+    return NextResponse.json({ error: "Failed to cancel subscription. Please try again." }, { status: 502 });
+  }
 }

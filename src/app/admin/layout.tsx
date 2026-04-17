@@ -2,8 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { ShieldCheck } from "lucide-react";
-
-const ADMIN_EMAIL = "nikolas.sapalidis@gmail.com";
+import { ADMIN_EMAIL } from "@/lib/admin";
 
 export default async function AdminLayout({
   children,

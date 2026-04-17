@@ -75,7 +75,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const supabase = createClient();
     supabase.auth.getUser().then(({ data }) => {
       setUserEmail(data.user?.email ?? null);
-    });
+    }).catch(() => {});
   }, []);
 
   async function handleSignOut() {
