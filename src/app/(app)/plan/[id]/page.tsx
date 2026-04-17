@@ -177,6 +177,41 @@ function ScoreGauge({ score }: { score: number }) {
 
 // ─── roi badge ─────────────────────────────────────────────────────────────────
 
+function SprintWeek({
+  week,
+  defaultOpen,
+}: {
+  week: { week: number; tasks: ActionItem[] };
+  defaultOpen: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="rounded-xl border border-border overflow-hidden">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors"
+      >
+        <span className="text-xs font-bold text-primary bg-primary/15 rounded-full px-2.5 py-1 shrink-0">
+          Week {week.week}
+        </span>
+        <span className="text-xs text-muted-foreground flex-1 text-left">
+          {week.tasks.length} action{week.tasks.length !== 1 ? "s" : ""}
+        </span>
+        <ChevronRight
+          className={cn("size-4 text-muted-foreground transition-transform", open && "rotate-90")}
+        />
+      </button>
+      {open && (
+        <div className="flex flex-col gap-3 px-4 pb-4">
+          {week.tasks.map((task) => (
+            <ActionCard key={task.title} item={task} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function RoiBadge({ rank }: { rank: number }) {
   const labels = ["#1 Best ROI", "#2 Strong", "#3 Good", "#4 Worth Testing"];
   const styles = [
@@ -471,7 +506,7 @@ export default function PlanPage({
                             <motion.div
                               className="h-full rounded-full bg-primary"
                               initial={{ width: 0 }}
-                              animate={{ width: `${val}%` }}
+                              animate={{ width: `${(val / 20) * 100}%` }}
                               transition={{ duration: 1, ease: "easeOut" }}
                             />
                           </div>
@@ -519,70 +554,64 @@ export default function PlanPage({
             </Card>
           </section>
 
-          {/* Commitment Section — only shown when signed in */}
-          {authed && <section>
-            {!committed ? (
-              <div className="rounded-2xl border border-primary/30 bg-primary/5 p-6 mb-2">
-                <div className="flex items-center gap-2.5 mb-3">
-                  <div className="size-8 rounded-lg bg-primary/15 flex items-center justify-center shrink-0">
-                    <Target className="size-4 text-primary" />
-                  </div>
-                  <h2 className="text-base font-semibold text-foreground">
-                    Commit to Your Top 3
-                  </h2>
-                </div>
-                <p className="text-sm text-muted-foreground mb-5">
-                  Select the actions you commit to completing this week. They&apos;ll appear on your dashboard.
+          {/* This Week's Top 3 + Commit */}
+          <section>
+            <SectionHeader id="top-3" icon={Rocket} title="This Week&apos;s Top 3" />
+            <div className="flex flex-col gap-4">
+              {plan.this_weeks_top_3.map((item, i) => (
+                authed && !committed ? (
+                  <label
+                    key={item.title}
+                    className={cn(
+                      "flex items-start gap-3 rounded-xl border p-1 cursor-pointer transition-all",
+                      selectedIndices.includes(i)
+                        ? "border-primary/40 bg-primary/5"
+                        : "border-transparent hover:border-border"
+                    )}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedIndices.includes(i)}
+                      onChange={() =>
+                        setSelectedIndices((prev) =>
+                          prev.includes(i) ? prev.filter((x) => x !== i) : [...prev, i]
+                        )
+                      }
+                      className="mt-4 ml-2 size-4 accent-primary shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <ActionCard item={item} />
+                    </div>
+                  </label>
+                ) : (
+                  <ActionCard key={item.title} item={item} />
+                )
+              ))}
+            </div>
+
+            {authed && !committed && (
+              <div className="mt-4 flex flex-col gap-3">
+                <p className="text-xs text-muted-foreground">
+                  Select the actions you commit to this week — they&apos;ll appear on your dashboard.
                 </p>
-                <div className="space-y-2 mb-5">
-                  {plan.this_weeks_top_3.map((action, i) => (
-                    <label
-                      key={i}
-                      className={cn(
-                        "flex items-start gap-3 rounded-xl border p-3.5 cursor-pointer transition-all",
-                        selectedIndices.includes(i)
-                          ? "border-primary/40 bg-primary/10"
-                          : "border-border hover:border-primary/20 hover:bg-muted/30"
-                      )}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedIndices.includes(i)}
-                        onChange={() =>
-                          setSelectedIndices((prev) =>
-                            prev.includes(i)
-                              ? prev.filter((x) => x !== i)
-                              : [...prev, i]
-                          )
-                        }
-                        className="mt-0.5 size-4 accent-primary shrink-0"
-                      />
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-foreground leading-snug">
-                          {action.title}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {action.time_estimate}
-                        </p>
-                      </div>
-                    </label>
-                  ))}
-                </div>
                 {commitError && (
-                  <p className="text-sm text-destructive mb-3">{commitError}</p>
+                  <p className="text-sm text-destructive">{commitError}</p>
                 )}
                 <Button
                   onClick={handleCommit}
                   disabled={selectedIndices.length === 0 || committing}
-                  className="gap-2"
+                  className="gap-2 self-start"
                 >
+                  <Target className="size-4" />
                   {committing
                     ? "Saving…"
-                    : `Commit to ${selectedIndices.length} action${selectedIndices.length !== 1 ? "s" : ""}`}
+                    : `Commit to ${selectedIndices.length} action${selectedIndices.length !== 1 ? "s" : ""} this week`}
                 </Button>
               </div>
-            ) : (
-              <div className="flex items-center gap-3 rounded-xl border border-green-500/30 bg-green-500/5 px-4 py-3 mb-2">
+            )}
+
+            {committed && (
+              <div className="mt-4 flex items-center gap-3 rounded-xl border border-green-500/30 bg-green-500/5 px-4 py-3">
                 <CheckCircle2 className="size-4 text-green-400 shrink-0" />
                 <p className="text-sm font-medium text-foreground flex-1">
                   You&apos;ve committed to this week&apos;s actions.
@@ -597,16 +626,6 @@ export default function PlanPage({
                 </Button>
               </div>
             )}
-          </section>}
-
-          {/* This Week's Top 3 */}
-          <section>
-            <SectionHeader id="top-3" icon={Rocket} title="This Week's Top 3" />
-            <div className="flex flex-col gap-4">
-              {plan.this_weeks_top_3.map((item) => (
-                <ActionCard key={item.title} item={item} />
-              ))}
-            </div>
           </section>
 
           {/* What to Skip */}
@@ -714,21 +733,9 @@ export default function PlanPage({
               icon={ListChecks}
               title="30-Day Sprint"
             />
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-3">
               {plan.sprint_30_day.map((week) => (
-                <div key={week.week}>
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-xs font-bold text-primary bg-primary/15 rounded-full px-2.5 py-1">
-                      Week {week.week}
-                    </span>
-                    <div className="flex-1 h-px bg-border" />
-                  </div>
-                  <div className="flex flex-col gap-3">
-                    {week.tasks.map((task) => (
-                      <ActionCard key={task.title} item={task} />
-                    ))}
-                  </div>
-                </div>
+                <SprintWeek key={week.week} week={week} defaultOpen={week.week === 1} />
               ))}
             </div>
           </section>

@@ -73,6 +73,8 @@ const QUOTES = [
 interface DashboardState {
   weeklyActions: DBActionItem[];
   weeklyActionId: string | null;
+  latestPlanTop3: DBActionItem[];
+  latestPlanId: string | null;
   plans: PastPlan[];
   totalPlans: number;
   streak: number;
@@ -85,6 +87,8 @@ function useDashboardData() {
   const [state, setState] = useState<DashboardState>({
     weeklyActions: [],
     weeklyActionId: null,
+    latestPlanTop3: [],
+    latestPlanId: null,
     plans: [],
     totalPlans: 0,
     streak: 0,
@@ -145,9 +149,16 @@ function useDashboardData() {
         })
       );
 
+      const latestTop3 = (
+        (latestPlan?.plan_content as { this_weeks_top_3?: DBActionItem[] } | null)
+          ?.this_weeks_top_3 ?? []
+      );
+
       setState({
         weeklyActions: (waRow?.actions as DBActionItem[]) ?? [],
         weeklyActionId: waRow?.id ?? null,
+        latestPlanTop3: latestTop3,
+        latestPlanId: latestPlan?.id ?? null,
         checkInPlanId: waRow?.plan_id ?? plansRows[0]?.id ?? null,
         totalPlans: countRes.count ?? 0,
         plans: plansRows.map((p) => ({
@@ -291,9 +302,13 @@ function ScoreBar({ score, delay = 0 }: { score: number; delay?: number }) {
 function WeeklyFocusSection({
   initialActions,
   weeklyActionId,
+  latestPlanTop3,
+  latestPlanId,
 }: {
   initialActions: DBActionItem[];
   weeklyActionId: string | null;
+  latestPlanTop3: DBActionItem[];
+  latestPlanId: string | null;
 }) {
   const [actions, setActions] = useState<ActionItem[]>(
     initialActions.map((a, i) => ({
@@ -306,6 +321,51 @@ function WeeklyFocusSection({
   );
 
   if (initialActions.length === 0) {
+    // Show latest plan's top 3 as a preview with a nudge to commit
+    if (latestPlanTop3.length > 0 && latestPlanId) {
+      return (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2.5">
+              <div className="flex size-8 items-center justify-center rounded-lg bg-primary/15">
+                <Calendar className="size-4 text-primary" />
+              </div>
+              <div>
+                <CardTitle>This Week&apos;s Focus</CardTitle>
+                <CardDescription className="mt-0.5">From your latest plan</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-2.5">
+            {latestPlanTop3.slice(0, 3).map((a, i) => (
+              <div key={i} className="flex items-start gap-3 rounded-xl border border-border bg-card px-4 py-3">
+                <div className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border-2 border-border text-xs font-bold text-muted-foreground">
+                  {i + 1}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground leading-snug">{a.title}</p>
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <Clock className="size-3 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">{a.time_estimate}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+          <CardFooter>
+            <Button
+              render={<Link href={`/plan/${latestPlanId}`} />}
+              className="w-full gap-2 text-sm rounded-xl"
+              variant="outline"
+            >
+              <CheckCircle className="size-3.5" />
+              Open plan and commit to these actions
+            </Button>
+          </CardFooter>
+        </Card>
+      );
+    }
+
     return (
       <Card>
         <CardContent className="pt-6 pb-6 text-center">
@@ -794,6 +854,8 @@ export default function DashboardPage() {
           <WeeklyFocusSection
             initialActions={state.weeklyActions}
             weeklyActionId={state.weeklyActionId}
+            latestPlanTop3={state.latestPlanTop3}
+            latestPlanId={state.latestPlanId}
           />
           <PlanHistorySection plans={state.plans} />
         </div>
