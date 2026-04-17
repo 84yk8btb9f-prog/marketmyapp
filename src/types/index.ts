@@ -76,10 +76,14 @@ export interface PlanInput {
   preferred_channels: string[];
 }
 
-// Quick assessment (3 questions for instant win)
+// Quick assessment
 export interface QuickAssessment {
   app_name: string;
+  app_description: string;
+  target_customer: string;
   stage: "idea" | "building" | "launched" | "growing";
+  current_traction: string;
+  channels_tried: string[];
   biggest_struggle: string;
 }
 
