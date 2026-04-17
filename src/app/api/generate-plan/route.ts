@@ -34,11 +34,12 @@ export async function POST(request: Request) {
   const rateLimitResponse = await checkRateLimit(generatePlanLimiter, `generate-plan:${getIP(request)}`);
   if (rateLimitResponse) return rateLimitResponse;
 
-  // Auth — optional. Plans can be generated without an account.
+  // Auth — required.
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   // Parse input
   let body: unknown;

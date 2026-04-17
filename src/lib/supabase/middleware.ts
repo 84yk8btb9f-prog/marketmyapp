@@ -32,12 +32,17 @@ export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   // Redirect unauthenticated users away from auth-required pages
-  // /plan and /plans are intentionally public — no login needed
+  // /plan/[id] is intentionally public (shareable) — all other app routes require auth
   if (
     !user &&
     (pathname.startsWith("/dashboard") ||
       pathname.startsWith("/settings") ||
-      pathname.startsWith("/admin"))
+      pathname.startsWith("/admin") ||
+      pathname.startsWith("/plans") ||
+      pathname.startsWith("/check-in") ||
+      pathname.startsWith("/assess") ||
+      pathname === "/plan/new" ||
+      pathname.startsWith("/plan/new/"))
   ) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
