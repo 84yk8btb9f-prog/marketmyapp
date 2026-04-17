@@ -2,15 +2,24 @@ import { z } from "zod";
 import { anthropic } from "@/lib/anthropic";
 import { groqComplete } from "@/lib/groq";
 import { buildHealthScorePrompt } from "@/lib/prompts/health-score";
+import { healthScoreLimiter, checkRateLimit, getIP } from "@/lib/ratelimit";
 import type { HealthScoreResult } from "@/types";
 
 const QuickAssessmentSchema = z.object({
   app_name: z.string().min(1, "App name is required"),
+  app_description: z.string().min(1, "App description is required"),
+  target_customer: z.string().min(1, "Target customer is required"),
   stage: z.enum(["idea", "building", "launched", "growing"]),
+  current_traction: z.string().min(1, "Traction is required"),
+  channels_tried: z.array(z.string()),
   biggest_struggle: z.string().min(1, "Biggest struggle is required"),
 });
 
 export async function POST(request: Request) {
+  // Rate limit by IP — unauthenticated endpoint that calls AI APIs
+  const rateLimitResponse = await checkRateLimit(healthScoreLimiter, `health-score:${getIP(request)}`);
+  if (rateLimitResponse) return rateLimitResponse;
+
   let body: unknown;
 
   try {
@@ -61,8 +70,9 @@ export async function POST(request: Request) {
   try {
     result = JSON.parse(cleanedText) as HealthScoreResult;
   } catch {
+    console.error("[health-score] Failed to parse AI response as JSON:", cleanedText.slice(0, 200));
     return Response.json(
-      { error: "Failed to parse Claude response as JSON", raw: cleanedText },
+      { error: "Failed to generate health score. Please try again." },
       { status: 502 }
     );
   }
