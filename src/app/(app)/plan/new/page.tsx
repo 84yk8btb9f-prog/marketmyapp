@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { track } from "@vercel/analytics";
 import { motion, AnimatePresence } from "framer-motion";
-import { Zap, ChevronRight, ChevronLeft, Loader2 } from "lucide-react";
+import { Zap, ChevronRight, ChevronLeft, Loader2, Lightbulb, Hammer, Rocket, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +28,9 @@ const APP_CATEGORIES = [
 
 const HANG_OUT_CHANNELS = [
   "Twitter/X",
+  "LinkedIn",
+  "Instagram",
+  "TikTok",
   "Reddit",
   "Indie Hackers",
   "Hacker News",
@@ -37,31 +40,18 @@ const HANG_OUT_CHANNELS = [
   "Other",
 ];
 
+const STAGE_ICONS: Record<string, React.ReactNode> = {
+  idea: <Lightbulb className="size-4" />,
+  building: <Hammer className="size-4" />,
+  launched: <Rocket className="size-4" />,
+  growing: <TrendingUp className="size-4" />,
+};
+
 const STAGES = [
-  {
-    value: "idea",
-    label: "Idea",
-    description: "Still validating",
-    icon: "💡",
-  },
-  {
-    value: "building",
-    label: "Building",
-    description: "In active development",
-    icon: "🔨",
-  },
-  {
-    value: "launched",
-    label: "Launched",
-    description: "Live but early",
-    icon: "🚀",
-  },
-  {
-    value: "growing",
-    label: "Growing",
-    description: "Traction achieved",
-    icon: "📈",
-  },
+  { value: "idea", label: "Idea", description: "Still validating" },
+  { value: "building", label: "Building", description: "In active development" },
+  { value: "launched", label: "Launched", description: "Live but early" },
+  { value: "growing", label: "Growing", description: "Traction achieved" },
 ] as const;
 
 const FOUNDER_STRENGTHS = [
@@ -93,6 +83,15 @@ const GOAL_OPTIONS = [
 ];
 
 const TIMELINE_OPTIONS = ["1 month", "3 months", "6 months", "12 months"];
+
+const GENERATION_MESSAGES = [
+  { text: "Analyzing your app's positioning...", sub: "How clearly does it stand apart from the noise?" },
+  { text: "Mapping your target audience...", sub: "Who needs this most and where they spend time" },
+  { text: "Evaluating your channel options...", sub: "Finding the highest-ROI growth levers for your stage" },
+  { text: "Building your 30-day sprint plan...", sub: "Focused, actionable steps you can start today" },
+  { text: "Crafting your content strategy...", sub: "Messages that resonate with your ideal customer" },
+  { text: "Finalizing your growth roadmap...", sub: "Almost done — your plan is taking shape" },
+];
 
 // ─── blank form state ──────────────────────────────────────────────────────────
 
@@ -379,13 +378,18 @@ function Step3({
                 type="button"
                 onClick={() => update("stage", s.value)}
                 className={cn(
-                  "flex flex-col items-center gap-1 rounded-xl border p-3 text-center transition-all",
+                  "flex flex-col items-center gap-1.5 rounded-xl border p-3 text-center transition-all",
                   active
                     ? "border-primary bg-primary/10 text-primary"
                     : "border-border bg-transparent text-muted-foreground hover:border-primary/40 hover:text-foreground"
                 )}
               >
-                <span className="text-xl">{s.icon}</span>
+                <div className={cn(
+                  "flex size-7 items-center justify-center rounded-lg",
+                  active ? "bg-primary/20" : "bg-muted/60"
+                )}>
+                  {STAGE_ICONS[s.value]}
+                </div>
                 <span className="text-sm font-medium">{s.label}</span>
                 <span className="text-xs opacity-70">{s.description}</span>
               </button>
@@ -517,6 +521,13 @@ export default function NewPlanPage() {
   const [form, setForm] = useState<PlanInput>(INITIAL_FORM);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [genMsgIdx, setGenMsgIdx] = useState(0);
+
+  useEffect(() => {
+    if (!submitting) { setGenMsgIdx(0); return; }
+    const t = setInterval(() => setGenMsgIdx((i) => (i + 1) % GENERATION_MESSAGES.length), 2800);
+    return () => clearInterval(t);
+  }, [submitting]);
 
   function update(key: keyof PlanInput, value: unknown) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -567,6 +578,46 @@ export default function NewPlanPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      {/* Generation overlay */}
+      <AnimatePresence>
+        {submitting && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/95 backdrop-blur-sm"
+          >
+            <div className="flex flex-col items-center gap-6 text-center max-w-sm px-6">
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                className="size-10 rounded-full border-2 border-border border-t-primary"
+              />
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={genMsgIdx}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.35, ease: "easeOut" }}
+                  className="space-y-2"
+                >
+                  <p className="text-base font-semibold text-foreground">
+                    {GENERATION_MESSAGES[genMsgIdx].text}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {GENERATION_MESSAGES[genMsgIdx].sub}
+                  </p>
+                </motion.div>
+              </AnimatePresence>
+              <p className="text-xs text-muted-foreground/50 mt-2">
+                Usually takes 10–20 seconds
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Top nav */}
       <header className="sticky top-0 z-10 border-b border-border bg-background/80 backdrop-blur-sm px-4 py-3 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2 group">

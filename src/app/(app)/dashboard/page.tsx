@@ -164,7 +164,7 @@ function useDashboardData() {
           )?.this_weeks_top_3?.[0]?.title ?? "",
         })),
         streak: profile?.current_streak ?? 0,
-        overallScore: profile?.health_score ?? 0,
+        overallScore: latestPlan?.health_score || profile?.health_score || 0,
         scoreDimensions,
       });
       setLoading(false);
@@ -507,7 +507,7 @@ function HealthScoreSection({
                   {dim.score}
                 </span>
               </div>
-              <ScoreBar score={dim.score} delay={0.3 + i * 0.08} />
+              <ScoreBar score={(dim.score / 20) * 100} delay={0.3 + i * 0.08} />
             </div>
           ))}
         </div>

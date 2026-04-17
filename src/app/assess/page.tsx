@@ -57,6 +57,8 @@ const TRACTION_OPTIONS = [
 const CHANNEL_OPTIONS = [
   "Twitter / X",
   "LinkedIn",
+  "Instagram",
+  "TikTok",
   "Reddit",
   "Hacker News",
   "Product Hunt",
@@ -66,6 +68,15 @@ const CHANNEL_OPTIONS = [
   "Communities / Discord",
   "Word of mouth",
   "None yet",
+];
+
+const ANALYSIS_MESSAGES = [
+  { text: "Reading your positioning...", sub: "How clearly does your product communicate its value?" },
+  { text: "Mapping your audience...", sub: "Do you know exactly who you're building for?" },
+  { text: "Evaluating your channels...", sub: "Are you fishing where the fish are?" },
+  { text: "Checking content signals...", sub: "Is your organic engine running?" },
+  { text: "Running the numbers...", sub: "Are you measuring what actually matters?" },
+  { text: "Writing your score...", sub: "Putting it all together — almost there." },
 ];
 
 const FADE_UP: Variants = {
@@ -191,6 +202,13 @@ export default function AssessPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<HealthScoreResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loadingMsgIdx, setLoadingMsgIdx] = useState(0);
+
+  useEffect(() => {
+    if (!loading) { setLoadingMsgIdx(0); return; }
+    const t = setInterval(() => setLoadingMsgIdx((i) => (i + 1) % ANALYSIS_MESSAGES.length), 2200);
+    return () => clearInterval(t);
+  }, [loading]);
 
   const totalSteps = 5;
 
@@ -481,21 +499,46 @@ export default function AssessPage() {
     return (
       <main className="min-h-screen flex flex-col items-center justify-center px-6">
         <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
+          initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="flex flex-col items-center gap-6"
+          className="flex flex-col items-center gap-7 text-center max-w-xs"
         >
           <motion.div
             animate={{ rotate: 360 }}
             transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-            className="size-12 rounded-full border-2 border-border border-t-primary"
+            className="size-11 rounded-full border-2 border-border border-t-primary"
           />
-          <p className="text-base font-medium text-foreground flex items-center gap-2">
-            Analyzing your marketing <AnimatedDots />
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Running your app through 5 marketing dimensions
-          </p>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={loadingMsgIdx}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.35, ease: "easeOut" }}
+              className="space-y-2"
+            >
+              <p className="text-base font-semibold text-foreground">
+                {ANALYSIS_MESSAGES[loadingMsgIdx].text}
+              </p>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                {ANALYSIS_MESSAGES[loadingMsgIdx].sub}
+              </p>
+            </motion.div>
+          </AnimatePresence>
+          {/* Step dots */}
+          <div className="flex gap-1.5">
+            {ANALYSIS_MESSAGES.map((_, i) => (
+              <motion.div
+                key={i}
+                className="h-1 rounded-full bg-border"
+                animate={{
+                  width: i === loadingMsgIdx ? 20 : 6,
+                  backgroundColor: i <= loadingMsgIdx ? "oklch(0.65 0.25 285)" : undefined,
+                }}
+                transition={{ duration: 0.3 }}
+              />
+            ))}
+          </div>
         </motion.div>
       </main>
     );
