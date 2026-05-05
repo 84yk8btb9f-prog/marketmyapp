@@ -22,10 +22,15 @@ export async function POST() {
     let customerId = profile?.stripe_customer_id as string | null;
 
     if (!customerId) {
-      const customer = await stripe.customers.create({
-        email: user.email,
-        metadata: { supabase_user_id: user.id },
-      });
+      const customer = await stripe.customers.create(
+        {
+          email: user.email,
+          metadata: { supabase_user_id: user.id },
+        },
+        {
+          idempotencyKey: `customer-create-${user.id}`,
+        }
+      );
       customerId = customer.id;
 
       await supabase
