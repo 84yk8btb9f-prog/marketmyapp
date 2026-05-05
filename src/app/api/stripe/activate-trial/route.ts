@@ -42,6 +42,18 @@ export async function POST(req: Request) {
   }
 
   try {
+    // Validate format
+    const pmRegex = /^pm_[a-zA-Z0-9_]+$/;
+    if (!pmRegex.test(paymentMethodId)) {
+      return NextResponse.json({ error: "Invalid payment method" }, { status: 400 });
+    }
+
+    // Verify the PM isn't already attached to a different customer
+    const existingPm = await stripe.paymentMethods.retrieve(paymentMethodId);
+    if (existingPm.customer && existingPm.customer !== customerId) {
+      return NextResponse.json({ error: "Invalid payment method" }, { status: 400 });
+    }
+
     await stripe.paymentMethods.attach(paymentMethodId, { customer: customerId });
     await stripe.customers.update(customerId, {
       invoice_settings: { default_payment_method: paymentMethodId },
