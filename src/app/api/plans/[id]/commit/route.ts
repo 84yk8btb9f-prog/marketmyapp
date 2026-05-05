@@ -1,3 +1,14 @@
+// REQUIRED: Run this RPC in Supabase SQL editor before deploying:
+// CREATE OR REPLACE FUNCTION increment_streak(p_user_id uuid)
+// RETURNS void LANGUAGE sql AS $$
+//   UPDATE mma_profiles
+//   SET
+//     current_streak = current_streak + 1,
+//     longest_streak = GREATEST(longest_streak, current_streak + 1),
+//     updated_at = now()
+//   WHERE id = p_user_id;
+// $$;
+
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { commitLimiter, checkRateLimit } from "@/lib/ratelimit";
@@ -86,29 +97,13 @@ export async function POST(
     return NextResponse.json({ error: "Failed to save commitment" }, { status: 500 });
   }
 
-  // Update streak: increment by 1 and update longest if needed
-  const { data: profile, error: profileError } = await supabase
-    .from("mma_profiles")
-    .select("current_streak, longest_streak")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (profileError) {
-    console.error("[commit] profile fetch failed:", profileError.message);
-  }
-
-  const newStreak = (profile?.current_streak ?? 0) + 1;
-  const newLongest = Math.max(newStreak, profile?.longest_streak ?? 0);
-
-  const { error: streakError } = await supabase
-    .from("mma_profiles")
-    .update({ current_streak: newStreak, longest_streak: newLongest })
-    .eq("id", user.id);
-
-  if (streakError) {
-    console.error("[commit] streak update failed:", streakError.message);
-    // non-fatal: commitment is saved, streak will self-correct on next operation
-  }
+  // Update streak atomically via DB RPC to avoid read-modify-write race conditions.
+  // NOTE: requires the increment_streak function to be deployed — see SQL comment at top of file.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error: streakError } = await (supabase.rpc as any)("increment_streak", {
+    p_user_id: user.id,
+  });
+  if (streakError) console.error("Streak increment failed:", streakError);
 
   return NextResponse.json({ id: weeklyAction.id });
 }
