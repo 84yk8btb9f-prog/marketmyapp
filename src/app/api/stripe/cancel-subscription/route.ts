@@ -14,7 +14,7 @@ export async function POST() {
 
   const { data: profile } = await supabase
     .from("mma_profiles")
-    .select("stripe_subscription_id")
+    .select("stripe_subscription_id, stripe_customer_id")
     .eq("id", user.id)
     .single();
 
@@ -24,6 +24,12 @@ export async function POST() {
   }
 
   try {
+    // Verify the subscription belongs to this customer before modifying it
+    const stripeSubscription = await stripe.subscriptions.retrieve(subscriptionId);
+    if (stripeSubscription.customer !== profile.stripe_customer_id) {
+      return NextResponse.json({ error: "Subscription not found" }, { status: 404 });
+    }
+
     await stripe.subscriptions.update(subscriptionId, { cancel_at_period_end: true });
 
     // plan_tier is NOT updated here — the webhook's customer.subscription.deleted
