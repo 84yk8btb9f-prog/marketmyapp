@@ -175,7 +175,7 @@ function useDashboardData() {
           )?.this_weeks_top_3?.[0]?.title ?? "",
         })),
         streak: profile?.current_streak ?? 0,
-        overallScore: latestPlan?.health_score || profile?.health_score || 0,
+        overallScore: latestPlan?.health_score ?? profile?.health_score ?? 0,
         scoreDimensions,
       });
       setLoading(false);
