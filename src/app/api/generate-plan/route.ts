@@ -135,6 +135,15 @@ export async function POST(request: Request) {
   return NextResponse.json({ id: savedPlan.id });
 }
 
+function escHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 async function sendPlanEmail(
   email: string,
   appName: string,
@@ -150,9 +159,9 @@ async function sendPlanEmail(
       (a: ActionItem) => `
     <tr>
       <td style="padding:12px 0;border-bottom:1px solid #1f1f1f;">
-        <strong style="color:#fafafa;font-size:14px;">${a.title}</strong>
-        <p style="margin:4px 0 0;color:#888;font-size:13px;">${a.description}</p>
-        <p style="margin:4px 0 0;color:#e5a520;font-size:12px;">${a.time_estimate}</p>
+        <strong style="color:#fafafa;font-size:14px;">${escHtml(a.title)}</strong>
+        <p style="margin:4px 0 0;color:#888;font-size:13px;">${escHtml(a.description)}</p>
+        <p style="margin:4px 0 0;color:#e5a520;font-size:12px;">${escHtml(a.time_estimate)}</p>
       </td>
     </tr>`
     )
@@ -168,7 +177,7 @@ async function sendPlanEmail(
         MarketMyApp
       </p>
       <h1 style="font-size:24px;font-weight:700;margin:0 0 8px;color:#fafafa;">
-        Your plan for ${appName} is ready
+        Your plan for ${escHtml(appName)} is ready
       </h1>
       <p style="color:#888;font-size:14px;margin:0 0 32px;">
         Here's what to focus on this week.
