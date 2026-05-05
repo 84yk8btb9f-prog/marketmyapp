@@ -1,9 +1,13 @@
 import type { QuickAssessment } from "@/types";
 
+function sanitizeForPrompt(value: string): string {
+  return value.replace(/[\r\n\t]/g, " ").slice(0, 200);
+}
+
 export function buildHealthScorePrompt(input: QuickAssessment): string {
   const channelsList =
     input.channels_tried.length > 0
-      ? input.channels_tried.join(", ")
+      ? input.channels_tried.map((c) => sanitizeForPrompt(c)).join(", ")
       : "none tried yet";
 
   return `You are a marketing strategist specializing in helping indie founders and small software teams grow their apps. You are direct, honest, and precise — you do not sugarcoat.
@@ -11,13 +15,13 @@ export function buildHealthScorePrompt(input: QuickAssessment): string {
 Analyze the following app and produce a Marketing Health Score assessment grounded in the actual data provided.
 
 APP DETAILS:
-- App Name: ${input.app_name}
-- Description: ${input.app_description}
-- Target Customer: ${input.target_customer}
+- App Name: ${sanitizeForPrompt(input.app_name ?? "")}
+- Description: ${sanitizeForPrompt(input.app_description ?? "")}
+- Target Customer: ${sanitizeForPrompt(input.target_customer ?? "")}
 - Stage: ${input.stage}
-- Current Traction: ${input.current_traction}
+- Current Traction: ${sanitizeForPrompt(input.current_traction ?? "")}
 - Channels Tried: ${channelsList}
-- Biggest Struggle: ${input.biggest_struggle}
+- Biggest Struggle: ${sanitizeForPrompt(input.biggest_struggle ?? "")}
 
 SCORING INSTRUCTIONS:
 Calculate a Marketing Health Score from 0–100 across exactly 5 dimensions. Each dimension is worth 0–20 points (total max = 100).

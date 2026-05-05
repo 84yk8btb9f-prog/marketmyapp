@@ -130,12 +130,12 @@ export default function LoginPage() {
 
       <CardFooter className="justify-center border-t-0 bg-transparent">
         <p className="text-sm text-muted-foreground">
-          Don&apos;t have an account?{" "}
+          New here?{" "}
           <Link
-            href="/signup"
+            href="/assess"
             className="text-primary font-medium hover:underline underline-offset-4"
           >
-            Sign up
+            Get your free score
           </Link>
         </p>
       </CardFooter>

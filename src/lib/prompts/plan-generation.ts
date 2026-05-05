@@ -1,36 +1,40 @@
 import type { PlanInput } from "@/types";
 
+function sanitizeForPrompt(value: string): string {
+  return value.replace(/[\r\n\t]/g, " ").slice(0, 200);
+}
+
 export function buildPlanPrompt(input: PlanInput): string {
-  const budget = input.monthly_budget;
+  const budget = sanitizeForPrompt(input.monthly_budget ?? "");
   const stage = input.stage;
-  const strengths = input.founder_strengths.join(", ");
-  const channels = input.preferred_channels.join(", ");
+  const strengths = input.founder_strengths.map((s) => sanitizeForPrompt(s)).join(", ");
+  const channels = input.preferred_channels.map((c) => sanitizeForPrompt(c)).join(", ");
 
   return `You are a no-nonsense marketing strategist for indie founders. You give specific, stage-appropriate advice. You are ruthless about telling founders what to SKIP so they don't waste time on tactics that won't work yet.
 
 APP DETAILS:
-- Name: ${input.app_name}
-- Description: ${input.app_description}
-- URL: ${input.app_url}
-- Category: ${input.app_category}
+- Name: ${sanitizeForPrompt(input.app_name ?? "")}
+- Description: ${sanitizeForPrompt(input.app_description ?? "")}
+- URL: ${sanitizeForPrompt(input.app_url ?? "")}
+- Category: ${sanitizeForPrompt(input.app_category ?? "")}
 
 AUDIENCE:
-- Target Customer: ${input.target_customer}
-- Pain Point They Have: ${input.pain_point}
-- Current Alternatives They Use: ${input.alternatives}
-- Where They Hang Out Online: ${input.where_they_hang_out}
+- Target Customer: ${sanitizeForPrompt(input.target_customer ?? "")}
+- Pain Point They Have: ${sanitizeForPrompt(input.pain_point ?? "")}
+- Current Alternatives They Use: ${sanitizeForPrompt(input.alternatives ?? "")}
+- Where They Hang Out Online: ${sanitizeForPrompt(input.where_they_hang_out ?? "")}
 
 SITUATION:
 - Stage: ${stage}
-- Current Users: ${input.current_users}
-- Current Revenue: ${input.current_revenue}
+- Current Users: ${sanitizeForPrompt(input.current_users ?? "")}
+- Current Revenue: ${sanitizeForPrompt(input.current_revenue ?? "")}
 - Monthly Marketing Budget: ${budget}
-- Time Available Per Week: ${input.time_available}
+- Time Available Per Week: ${sanitizeForPrompt(input.time_available ?? "")}
 - Founder Strengths: ${strengths}
 
 GOALS:
-- Primary Goal: ${input.primary_goal}
-- Timeline: ${input.timeline}
+- Primary Goal: ${sanitizeForPrompt(input.primary_goal ?? "")}
+- Timeline: ${sanitizeForPrompt(input.timeline ?? "")}
 - Preferred Channels: ${channels}
 
 ---
@@ -96,9 +100,9 @@ You MUST respond with ONLY valid JSON. No markdown, no explanation, no code fenc
       "metrics": <number 0–20>
     },
     "top_priorities": [
-      { "title": <string>, "description": <string>, "impact": <string> },
-      { "title": <string>, "description": <string>, "impact": <string> },
-      { "title": <string>, "description": <string>, "impact": <string> }
+      { "title": <string>, "description": <string>, "impact": "High" | "Medium" | "Low" },
+      { "title": <string>, "description": <string>, "impact": "High" | "Medium" | "Low" },
+      { "title": <string>, "description": <string>, "impact": "High" | "Medium" | "Low" }
     ],
     "encouragement": <string>
   },

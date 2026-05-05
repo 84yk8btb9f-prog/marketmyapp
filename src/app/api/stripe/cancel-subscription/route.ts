@@ -14,7 +14,7 @@ export async function POST() {
 
   const { data: profile } = await supabase
     .from("mma_profiles")
-    .select("stripe_subscription_id")
+    .select("stripe_subscription_id, stripe_customer_id")
     .eq("id", user.id)
     .single();
 
@@ -23,12 +23,22 @@ export async function POST() {
     return NextResponse.json({ error: "No active subscription" }, { status: 400 });
   }
 
-  await stripe.subscriptions.cancel(subscriptionId);
+  try {
+    // Verify the subscription belongs to this customer before modifying it
+    const stripeSubscription = await stripe.subscriptions.retrieve(subscriptionId);
+    if (stripeSubscription.customer !== profile?.stripe_customer_id) {
+      return NextResponse.json({ error: "Subscription not found" }, { status: 404 });
+    }
 
-  await supabase
-    .from("mma_profiles")
-    .update({ plan_tier: "free", stripe_subscription_id: null })
-    .eq("id", user.id);
+    await stripe.subscriptions.update(subscriptionId, { cancel_at_period_end: true });
 
-  return NextResponse.json({ success: true });
+    // plan_tier is NOT updated here — the webhook's customer.subscription.deleted
+    // event handles the downgrade when the billing period ends.
+
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Stripe error";
+    console.error("[cancel-subscription] Stripe error:", message);
+    return NextResponse.json({ error: "Failed to cancel subscription. Please try again." }, { status: 502 });
+  }
 }

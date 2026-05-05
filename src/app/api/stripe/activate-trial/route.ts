@@ -12,11 +12,20 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { paymentMethodId } = await req.json();
+  let paymentMethodId: string;
+  try {
+    const body = await req.json();
+    if (!body?.paymentMethodId || typeof body.paymentMethodId !== "string") {
+      return NextResponse.json({ error: "Missing paymentMethodId" }, { status: 400 });
+    }
+    paymentMethodId = body.paymentMethodId;
+  } catch {
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+  }
 
   const { data: profile } = await supabase
     .from("mma_profiles")
-    .select("stripe_customer_id")
+    .select("stripe_customer_id, stripe_subscription_id")
     .eq("id", user.id)
     .single();
 
@@ -25,28 +34,46 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "No Stripe customer found" }, { status: 400 });
   }
 
-  await stripe.paymentMethods.attach(paymentMethodId, { customer: customerId });
-  await stripe.customers.update(customerId, {
-    invoice_settings: { default_payment_method: paymentMethodId },
-  });
+  if (profile?.stripe_subscription_id) {
+    return NextResponse.json(
+      { error: "A subscription already exists for this account" },
+      { status: 409 }
+    );
+  }
 
-  const subscription = await stripe.subscriptions.create({
-    customer: customerId,
-    items: [{ price: process.env.STRIPE_PRICE_ID! }],
-    trial_period_days: 7,
-    default_payment_method: paymentMethodId,
-  });
+  try {
+    // Validate format
+    const pmRegex = /^pm_[a-zA-Z0-9_]+$/;
+    if (!pmRegex.test(paymentMethodId)) {
+      return NextResponse.json({ error: "Invalid payment method" }, { status: 400 });
+    }
 
-  const trialEnd = new Date(subscription.trial_end! * 1000).toISOString();
+    // Verify the PM isn't already attached to a different customer
+    const existingPm = await stripe.paymentMethods.retrieve(paymentMethodId);
+    if (existingPm.customer && existingPm.customer !== customerId) {
+      return NextResponse.json({ error: "Invalid payment method" }, { status: 400 });
+    }
 
-  await supabase
-    .from("mma_profiles")
-    .update({
-      stripe_subscription_id: subscription.id,
-      plan_tier: "trial",
-      trial_ends_at: trialEnd,
-    })
-    .eq("id", user.id);
+    await stripe.paymentMethods.attach(paymentMethodId, { customer: customerId });
+    await stripe.customers.update(customerId, {
+      invoice_settings: { default_payment_method: paymentMethodId },
+    });
 
-  return NextResponse.json({ success: true });
+    const subscription = await stripe.subscriptions.create({
+      customer: customerId,
+      items: [{ price: process.env.STRIPE_PRICE_ID! }],
+      trial_period_days: 7,
+      default_payment_method: paymentMethodId,
+    });
+
+    // plan_tier and stripe_subscription_id are NOT updated here.
+    // The Stripe webhook (customer.subscription.updated with status "trialing")
+    // is the sole authority for subscription state in the DB.
+
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Stripe error";
+    console.error("[activate-trial] Stripe error:", message);
+    return NextResponse.json({ error: "Failed to activate trial. Please try again." }, { status: 502 });
+  }
 }

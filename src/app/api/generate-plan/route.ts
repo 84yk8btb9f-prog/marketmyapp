@@ -4,13 +4,16 @@ import { anthropic } from "@/lib/anthropic";
 import { groqComplete } from "@/lib/groq";
 import { buildPlanPrompt } from "@/lib/prompts/plan-generation";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { resend } from "@/lib/resend";
+import { generatePlanLimiter, checkRateLimit, getIP } from "@/lib/ratelimit";
 import type { PlanContent, ActionItem } from "@/types";
+import { PlanContentSchema } from "@/types";
 
 const PlanInputSchema = z.object({
   app_name: z.string().min(1),
   app_description: z.string().min(1),
-  app_url: z.string(),
+  app_url: z.string().url("Must be a valid URL").max(500).optional().or(z.literal("")),
   app_category: z.string().min(1),
   target_customer: z.string().min(1),
   pain_point: z.string().min(1),
@@ -28,15 +31,16 @@ const PlanInputSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  // Auth
+  // Rate limit by IP — this endpoint calls expensive AI APIs and is unauthenticated
+  const rateLimitResponse = await checkRateLimit(generatePlanLimiter, `generate-plan:${getIP(request)}`);
+  if (rateLimitResponse) return rateLimitResponse;
+
+  // Auth — required.
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   // Parse input
   let body: unknown;
@@ -86,19 +90,30 @@ export async function POST(request: Request) {
 
   let plan: PlanContent;
   try {
-    plan = JSON.parse(cleanedText) as PlanContent;
+    const parsed = JSON.parse(cleanedText);
+    const validation = PlanContentSchema.safeParse(parsed);
+    if (!validation.success) {
+      console.error("AI response failed schema validation:", validation.error.flatten());
+      return NextResponse.json(
+        { error: "AI returned an unexpected response format. Please try again." },
+        { status: 502 }
+      );
+    }
+    plan = parsed as PlanContent;
   } catch {
+    console.error("[generate-plan] Failed to parse AI response as JSON:", cleanedText.slice(0, 200));
     return NextResponse.json(
-      { error: "Failed to parse plan JSON", raw: cleanedText },
+      { error: "Failed to generate plan. Please try again." },
       { status: 502 }
     );
   }
 
-  // Save to DB
-  const { data: savedPlan, error: dbError } = await supabase
+  // Save to DB via service client (bypasses RLS — works for anonymous users too)
+  const service = createServiceClient();
+  const { data: savedPlan, error: dbError } = await service
     .from("plans")
     .insert({
-      user_id: user.id,
+      user_id: user?.id ?? null,
       app_name: input.app_name,
       input_data: input,
       plan_content: plan,
@@ -112,15 +127,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Failed to save plan" }, { status: 500 });
   }
 
-  // Send email — fire and forget, never block the response
-  sendPlanEmail(
-    user.email!,
-    input.app_name,
-    savedPlan.id,
-    plan
-  ).catch(() => {});
+  // Send email only for authenticated users with an email address
+  if (user?.email) {
+    sendPlanEmail(user.email, input.app_name, savedPlan.id, plan).catch(() => {});
+  }
 
   return NextResponse.json({ id: savedPlan.id });
+}
+
+function escHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 async function sendPlanEmail(
@@ -138,9 +159,9 @@ async function sendPlanEmail(
       (a: ActionItem) => `
     <tr>
       <td style="padding:12px 0;border-bottom:1px solid #1f1f1f;">
-        <strong style="color:#fafafa;font-size:14px;">${a.title}</strong>
-        <p style="margin:4px 0 0;color:#888;font-size:13px;">${a.description}</p>
-        <p style="margin:4px 0 0;color:#e5a520;font-size:12px;">${a.time_estimate}</p>
+        <strong style="color:#fafafa;font-size:14px;">${escHtml(a.title)}</strong>
+        <p style="margin:4px 0 0;color:#888;font-size:13px;">${escHtml(a.description)}</p>
+        <p style="margin:4px 0 0;color:#e5a520;font-size:12px;">${escHtml(a.time_estimate)}</p>
       </td>
     </tr>`
     )
@@ -156,7 +177,7 @@ async function sendPlanEmail(
         MarketMyApp
       </p>
       <h1 style="font-size:24px;font-weight:700;margin:0 0 8px;color:#fafafa;">
-        Your plan for ${appName} is ready
+        Your plan for ${escHtml(appName)} is ready
       </h1>
       <p style="color:#888;font-size:14px;margin:0 0 32px;">
         Here's what to focus on this week.

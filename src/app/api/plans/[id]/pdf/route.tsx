@@ -52,9 +52,12 @@ export async function GET(
     return NextResponse.json({ error: "PDF generation failed" }, { status: 500 });
   }
 
+  // Strip all non-alphanumeric chars to prevent Content-Disposition header injection
   const safeFilename = (planRow.app_name as string)
-    .replace(/[\r\n]/g, "")
-    .replace(/["/\\]/g, "_");
+    .replace(/[^a-zA-Z0-9\-_ ]/g, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .toLowerCase() || "marketing-plan";
 
   return new NextResponse(new Uint8Array(buffer), {
     headers: {

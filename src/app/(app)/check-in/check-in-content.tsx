@@ -65,12 +65,13 @@ export function CheckInContent() {
       return;
     }
     const supabase = createClient();
-    supabase
-      .from("weekly_actions")
-      .select("actions")
-      .eq("id", weeklyActionId)
-      .single()
-      .then(({ data, error }) => {
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from("weekly_actions")
+          .select("actions")
+          .eq("id", weeklyActionId)
+          .single();
         if (error || !data) {
           setNotFound(true);
         } else {
@@ -78,8 +79,12 @@ export function CheckInContent() {
           setActions(acts);
           setStatuses(acts.map(() => "in_progress" as CheckStatus));
         }
+      } catch {
+        setNotFound(true);
+      } finally {
         setLoading(false);
-      });
+      }
+    })();
   }, [weeklyActionId]);
 
   async function handleSubmit() {

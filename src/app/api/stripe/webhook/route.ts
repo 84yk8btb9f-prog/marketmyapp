@@ -31,15 +31,26 @@ export async function POST(req: Request) {
     const subscription = event.data.object as Stripe.Subscription;
     const customerId = subscription.customer as string;
 
-    let plan_tier: "free" | "trial" | "pro" = "free";
-    if (event.type === "customer.subscription.updated") {
-      if (subscription.status === "trialing") plan_tier = "trial";
-      else if (subscription.status === "active") plan_tier = "pro";
+    // Map subscription status to plan tier
+    let plan_tier: "trial" | "pro" | "free";
+    if (subscription.status === "trialing") {
+      plan_tier = "trial";
+    } else if (subscription.status === "active") {
+      plan_tier = "pro";
+    } else {
+      // Covers: past_due, unpaid, incomplete, incomplete_expired, paused, canceled
+      plan_tier = "free";
     }
+
+    // For deleted subscriptions, clear the subscription ID to avoid future 404s
+    const isDeleted = event.type === "customer.subscription.deleted";
 
     await supabase
       .from("mma_profiles")
-      .update({ plan_tier, stripe_subscription_id: subscription.id })
+      .update({
+        plan_tier,
+        stripe_subscription_id: isDeleted ? null : subscription.id,
+      })
       .eq("stripe_customer_id", customerId);
   }
 

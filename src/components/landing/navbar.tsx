@@ -71,6 +71,12 @@ export function Navbar() {
               {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
             </button>
           )}
+          <Link
+            href="/login"
+            className="px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-muted/50"
+          >
+            Sign in
+          </Link>
           <Button
             size="sm"
             className="rounded-lg font-medium"
@@ -111,6 +117,12 @@ export function Navbar() {
                 {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
               </button>
             )}
+            <Link
+              href="/login"
+              className="px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Sign in
+            </Link>
             <Button
               size="sm"
               className="rounded-lg font-medium ml-auto"

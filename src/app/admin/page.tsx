@@ -150,7 +150,7 @@ function TierSelector({
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full mt-1 z-20 min-w-[110px] rounded-xl border border-border bg-popover shadow-lg shadow-black/20 overflow-hidden">
+        <div className="absolute left-0 top-full mt-1 z-50 min-w-[120px] rounded-xl border border-border bg-popover shadow-xl shadow-black/30 overflow-hidden">
           {TIERS.map((t) => (
             <button
               key={t}
@@ -336,10 +336,10 @@ export default function AdminPage() {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.12 }}
-        className="rounded-xl border border-border bg-card overflow-hidden"
+        className="rounded-xl border border-border bg-card"
       >
         {/* Table header */}
-        <div className="grid grid-cols-[1fr_120px_80px_70px_80px_100px] gap-4 px-5 py-3 border-b border-border bg-muted/30">
+        <div className="grid grid-cols-[1fr_120px_80px_70px_80px_100px] gap-4 px-5 py-3 border-b border-border bg-muted/30 rounded-t-xl">
           {["User", "Plan", "Score", "Streak", "Plans", "Joined"].map((h) => (
             <span
               key={h}

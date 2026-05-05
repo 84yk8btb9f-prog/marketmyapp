@@ -1,3 +1,41 @@
+import { z } from "zod";
+
+export const ActionItemSchema = z.object({
+  title: z.string(),
+  description: z.string(),
+  impact: z.enum(["High", "Medium", "Low"]),
+  effort: z.string().optional(),
+  timeframe: z.string().optional(),
+});
+
+export const WeekSchema = z.object({
+  week: z.number(),
+  actions: z.array(ActionItemSchema),
+});
+
+export const ChannelStrategySchema = z.object({
+  channel: z.string(),
+  tactics: z.array(z.string()),
+  rationale: z.string().optional(),
+});
+
+export const HealthScoreDimensionSchema = z.object({
+  name: z.string(),
+  score: z.number(),
+  feedback: z.string(),
+});
+
+export const PlanContentSchema = z.object({
+  health_score: z.object({
+    score: z.number(),
+    dimensions: z.array(HealthScoreDimensionSchema),
+    summary: z.string(),
+  }),
+  channel_strategy: z.array(ChannelStrategySchema),
+  sprint_plan: z.array(WeekSchema),
+  top_3_actions: z.array(ActionItemSchema).optional(),
+});
+
 export interface Profile {
   id: string;
   email: string;
@@ -53,7 +91,7 @@ export interface PlanInput {
   // Step 1: Your App
   app_name: string;
   app_description: string;
-  app_url: string;
+  app_url?: string;
   app_category: string;
 
   // Step 2: Your Audience
@@ -76,10 +114,14 @@ export interface PlanInput {
   preferred_channels: string[];
 }
 
-// Quick assessment (3 questions for instant win)
+// Quick assessment
 export interface QuickAssessment {
   app_name: string;
+  app_description: string;
+  target_customer: string;
   stage: "idea" | "building" | "launched" | "growing";
+  current_traction: string;
+  channels_tried: string[];
   biggest_struggle: string;
 }
 
