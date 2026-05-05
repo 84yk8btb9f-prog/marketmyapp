@@ -25,13 +25,20 @@ export async function POST(req: Request) {
 
   const { data: profile } = await supabase
     .from("mma_profiles")
-    .select("stripe_customer_id")
+    .select("stripe_customer_id, stripe_subscription_id")
     .eq("id", user.id)
     .single();
 
   const customerId = profile?.stripe_customer_id as string | null;
   if (!customerId) {
     return NextResponse.json({ error: "No Stripe customer found" }, { status: 400 });
+  }
+
+  if (profile.stripe_subscription_id) {
+    return NextResponse.json(
+      { error: "A subscription already exists for this account" },
+      { status: 409 }
+    );
   }
 
   try {
