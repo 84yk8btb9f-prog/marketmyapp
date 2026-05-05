@@ -24,12 +24,10 @@ export async function POST() {
   }
 
   try {
-    await stripe.subscriptions.cancel(subscriptionId);
+    await stripe.subscriptions.update(subscriptionId, { cancel_at_period_end: true });
 
-    await supabase
-      .from("mma_profiles")
-      .update({ plan_tier: "free", stripe_subscription_id: null })
-      .eq("id", user.id);
+    // plan_tier is NOT updated here — the webhook's customer.subscription.deleted
+    // event handles the downgrade when the billing period ends.
 
     return NextResponse.json({ success: true });
   } catch (err) {
