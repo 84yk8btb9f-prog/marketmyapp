@@ -1,3 +1,9 @@
+// REQUIRED: Run this migration in Supabase SQL editor before deploying:
+// ALTER TABLE mma_profiles
+//   ADD COLUMN IF NOT EXISTS trial_email_day3_sent_at timestamptz,
+//   ADD COLUMN IF NOT EXISTS trial_email_day5_sent_at timestamptz,
+//   ADD COLUMN IF NOT EXISTS trial_email_day7_sent_at timestamptz;
+
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { resend } from "@/lib/resend";
@@ -29,19 +35,22 @@ export async function GET(req: Request) {
       .select("id, email, full_name")
       .eq("plan_tier", "trial")
       .gte("trial_ends_at", day3Lo)
-      .lte("trial_ends_at", day3Hi),
+      .lte("trial_ends_at", day3Hi)
+      .is("trial_email_day3_sent_at", null),
     supabase
       .from("mma_profiles")
       .select("id, email, full_name")
       .eq("plan_tier", "trial")
       .gte("trial_ends_at", day5Lo)
-      .lte("trial_ends_at", day5Hi),
+      .lte("trial_ends_at", day5Hi)
+      .is("trial_email_day5_sent_at", null),
     supabase
       .from("mma_profiles")
       .select("id, email, full_name")
       .eq("plan_tier", "trial")
       .gte("trial_ends_at", day7Lo)
-      .lt("trial_ends_at", now.toISOString()),
+      .lt("trial_ends_at", now.toISOString())
+      .is("trial_email_day7_sent_at", null),
   ]);
 
   if (day3Res.error) console.error("[cron] Day3 query failed:", day3Res.error.message);
@@ -52,15 +61,41 @@ export async function GET(req: Request) {
   const downgrades: Promise<unknown>[] = [];
 
   for (const u of day3Res.data ?? []) {
-    sends.push(sendEmail(u.email, u.full_name, "day3", APP_URL));
+    const uid = u.id;
+    sends.push(
+      sendEmail(u.email, u.full_name, "day3", APP_URL).then(async () => {
+        const { error } = await supabase
+          .from("mma_profiles")
+          .update({ trial_email_day3_sent_at: new Date().toISOString() })
+          .eq("id", uid);
+        if (error) console.error(`[cron] day3 sent_at update failed for ${uid}:`, error.message);
+      })
+    );
   }
   for (const u of day5Res.data ?? []) {
-    sends.push(sendEmail(u.email, u.full_name, "day5", APP_URL));
+    const uid = u.id;
+    sends.push(
+      sendEmail(u.email, u.full_name, "day5", APP_URL).then(async () => {
+        const { error } = await supabase
+          .from("mma_profiles")
+          .update({ trial_email_day5_sent_at: new Date().toISOString() })
+          .eq("id", uid);
+        if (error) console.error(`[cron] day5 sent_at update failed for ${uid}:`, error.message);
+      })
+    );
   }
   for (const u of day7Res.data ?? []) {
-    sends.push(sendEmail(u.email, u.full_name, "day7", APP_URL));
-    // Downgrade expired trial accounts — must be awaited before function returns
     const uid = u.id;
+    sends.push(
+      sendEmail(u.email, u.full_name, "day7", APP_URL).then(async () => {
+        const { error } = await supabase
+          .from("mma_profiles")
+          .update({ trial_email_day7_sent_at: new Date().toISOString() })
+          .eq("id", uid);
+        if (error) console.error(`[cron] day7 sent_at update failed for ${uid}:`, error.message);
+      })
+    );
+    // Downgrade expired trial accounts — must be awaited before function returns
     downgrades.push(
       (async () => {
         const { error } = await supabase
