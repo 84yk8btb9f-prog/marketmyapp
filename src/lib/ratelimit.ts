@@ -55,7 +55,16 @@ export async function checkRateLimit(
 
 /** Extract the best available IP from a Next.js Request. */
 export function getIP(request: Request): string {
+  // On Vercel, x-vercel-forwarded-for is the trusted real client IP
+  const vercelIp = request.headers.get("x-vercel-forwarded-for");
+  if (vercelIp) return vercelIp.split(",")[0].trim();
+
+  // Fallback: rightmost entry in x-forwarded-for is appended by the trusted proxy
   const forwarded = request.headers.get("x-forwarded-for");
-  if (forwarded) return forwarded.split(",")[0].trim();
-  return request.headers.get("x-real-ip") ?? "unknown";
+  if (forwarded) {
+    const parts = forwarded.split(",");
+    return parts[parts.length - 1].trim();
+  }
+
+  return "unknown";
 }
