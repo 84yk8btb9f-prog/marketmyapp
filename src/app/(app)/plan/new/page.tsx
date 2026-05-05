@@ -35,7 +35,6 @@ const HANG_OUT_CHANNELS = [
   "Indie Hackers",
   "Hacker News",
   "Product Hunt",
-  "LinkedIn",
   "Discord",
   "Other",
 ];
