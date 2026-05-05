@@ -8,11 +8,12 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { resend } from "@/lib/resend";
 import { generatePlanLimiter, checkRateLimit, getIP } from "@/lib/ratelimit";
 import type { PlanContent, ActionItem } from "@/types";
+import { PlanContentSchema } from "@/types";
 
 const PlanInputSchema = z.object({
   app_name: z.string().min(1),
   app_description: z.string().min(1),
-  app_url: z.string(),
+  app_url: z.string().url("Must be a valid URL").max(500).optional().or(z.literal("")),
   app_category: z.string().min(1),
   target_customer: z.string().min(1),
   pain_point: z.string().min(1),
@@ -89,7 +90,16 @@ export async function POST(request: Request) {
 
   let plan: PlanContent;
   try {
-    plan = JSON.parse(cleanedText) as PlanContent;
+    const parsed = JSON.parse(cleanedText);
+    const validation = PlanContentSchema.safeParse(parsed);
+    if (!validation.success) {
+      console.error("AI response failed schema validation:", validation.error.flatten());
+      return NextResponse.json(
+        { error: "AI returned an unexpected response format. Please try again." },
+        { status: 502 }
+      );
+    }
+    plan = parsed as PlanContent;
   } catch {
     console.error("[generate-plan] Failed to parse AI response as JSON:", cleanedText.slice(0, 200));
     return NextResponse.json(
