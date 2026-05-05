@@ -26,7 +26,7 @@ export async function POST() {
   try {
     // Verify the subscription belongs to this customer before modifying it
     const stripeSubscription = await stripe.subscriptions.retrieve(subscriptionId);
-    if (stripeSubscription.customer !== profile.stripe_customer_id) {
+    if (stripeSubscription.customer !== profile?.stripe_customer_id) {
       return NextResponse.json({ error: "Subscription not found" }, { status: 404 });
     }
 

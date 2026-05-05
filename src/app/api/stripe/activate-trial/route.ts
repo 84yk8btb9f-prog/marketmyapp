@@ -34,7 +34,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "No Stripe customer found" }, { status: 400 });
   }
 
-  if (profile.stripe_subscription_id) {
+  if (profile?.stripe_subscription_id) {
     return NextResponse.json(
       { error: "A subscription already exists for this account" },
       { status: 409 }
