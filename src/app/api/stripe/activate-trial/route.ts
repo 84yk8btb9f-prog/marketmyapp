@@ -54,18 +54,9 @@ export async function POST(req: Request) {
       default_payment_method: paymentMethodId,
     });
 
-    const trialEnd = subscription.trial_end
-      ? new Date(subscription.trial_end * 1000).toISOString()
-      : null;
-
-    await supabase
-      .from("mma_profiles")
-      .update({
-        stripe_subscription_id: subscription.id,
-        plan_tier: "trial",
-        trial_ends_at: trialEnd,
-      })
-      .eq("id", user.id);
+    // plan_tier and stripe_subscription_id are NOT updated here.
+    // The Stripe webhook (customer.subscription.updated with status "trialing")
+    // is the sole authority for subscription state in the DB.
 
     return NextResponse.json({ success: true });
   } catch (err) {
