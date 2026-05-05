@@ -96,9 +96,9 @@ You MUST respond with ONLY valid JSON. No markdown, no explanation, no code fenc
       "metrics": <number 0–20>
     },
     "top_priorities": [
-      { "title": <string>, "description": <string>, "impact": <string> },
-      { "title": <string>, "description": <string>, "impact": <string> },
-      { "title": <string>, "description": <string>, "impact": <string> }
+      { "title": <string>, "description": <string>, "impact": "High" | "Medium" | "Low" },
+      { "title": <string>, "description": <string>, "impact": "High" | "Medium" | "Low" },
+      { "title": <string>, "description": <string>, "impact": "High" | "Medium" | "Low" }
     ],
     "encouragement": <string>
   },
